@@ -20,7 +20,7 @@ from PySide6.QtWidgets import (
 )
 
 from app.schemas.characters import Character
-from app.services import portrait_service, project_service
+from app.services import chapter_service, portrait_service, project_service
 from app.ui.ascii_art import READING_CAT
 from app.ui.character_card import CharacterCard
 from app.ui.flow_layout import FlowLayout
@@ -42,6 +42,7 @@ class CharactersScreen(QWidget):
         self._pdf_path: str | None = None
         self._characters: list[Character] = []
         self._batch_label = ""
+        self._line_counts: dict | None = None
         self._build_ui()
 
     # --- UI construction -----------------------------------------------------
@@ -113,6 +114,7 @@ class CharactersScreen(QWidget):
     def open_pdf(self, path: str) -> None:
         """Open an existing project (load its saved characters)."""
         self._pdf_path = path
+        self._line_counts = None
         self.path_label.setText(path)
         self.reextract_btn.setEnabled(True)
         self._load_existing(path)
@@ -120,6 +122,7 @@ class CharactersScreen(QWidget):
     def start_new(self, path: str) -> None:
         """New project: create it and immediately run extraction with progress."""
         self._pdf_path = path
+        self._line_counts = None
         self.path_label.setText(path)
         self.reextract_btn.setEnabled(True)
         project_service.open_project(path)     # create folder + make active
@@ -286,12 +289,38 @@ class CharactersScreen(QWidget):
         lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.grid.addWidget(lbl)
 
+    def _speaker_line_counts(self) -> dict:
+        """Actual spoken-line count per speaker from the chapter plans (the
+        ground truth). Empty if chapters aren't planned yet."""
+        proj = project_service.active()
+        if proj is None:
+            return {}
+        counts: dict = {}
+        try:
+            for info in chapter_service.load_index(proj):
+                ch = chapter_service.load_chapter(proj, info["chapter_id"])
+                if ch:
+                    for ln in ch.lines:
+                        counts[ln.speaker_id] = counts.get(ln.speaker_id, 0) + 1
+        except Exception:  # noqa: BLE001
+            return {}
+        return counts
+
     def _render_cards(self, characters: list[Character]) -> None:
         self._clear_cards()
         if not characters:
             self._show_empty("No characters detected.")
             return
-        for ch in characters:
+        # Sort by how much each character speaks (chapter-plan lines; fall back
+        # to the extraction estimate before chapters exist). Counted once.
+        if self._line_counts is None:
+            self._line_counts = self._speaker_line_counts()
+        counts = self._line_counts
+
+        def spoken(ch):
+            return counts.get(ch.character_id, getattr(ch, "spoken_lines", 0))
+
+        for ch in sorted(characters, key=spoken, reverse=True):
             card = CharacterCard(ch)
             card.voice_assigned.connect(self._on_voice_assigned)
             self.grid.addWidget(card)

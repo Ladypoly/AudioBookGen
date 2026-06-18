@@ -40,6 +40,24 @@ def _speaker_color(sid: str) -> str:
     return _SPK_PALETTE[h % len(_SPK_PALETTE)]
 
 
+def _delivery_html(delivery) -> str:
+    """Colour-coded emotion / style / prosody / nonverbal chips for one line."""
+    import html as _html
+    if delivery is None:
+        return ""
+    chips: list[tuple[str, str]] = []
+    if getattr(delivery, "emotion", None):
+        chips.append((delivery.emotion.value, "#ffa94d"))      # emotion = amber
+    if getattr(delivery, "style", None):
+        chips.append((delivery.style.value, "#b794f6"))        # style = purple
+    for p in getattr(delivery, "prosody", None) or []:
+        chips.append((p.value, "#63e6be"))                     # prosody = teal
+    for nv in getattr(delivery, "nonverbal", None) or []:
+        chips.append((nv.value, "#f783ac"))                    # nonverbal = pink
+    return "".join(f"<span style='color:{c};font-size:11px'> ·{_html.escape(t)}</span>"
+                   for t, c in chips)
+
+
 class ChapterRow(QFrame):
     def __init__(self, info: dict, screen: "ChaptersScreen") -> None:
         super().__init__()
@@ -126,6 +144,14 @@ class ChapterRow(QFrame):
         if CONFIG.tts.music_enabled:
             mus = music_planner.music_for_chapter(chapter)[0]
             rows.append(f"<div style='color:#9DAAF2'><b>MUSIC</b> · {_html.escape(mus)}</div>")
+        # colour legend
+        rows.append(
+            "<div style='font-size:11px;margin-top:3px'>"
+            "<span style='color:#ffa94d'>emotion</span> &nbsp;"
+            "<span style='color:#b794f6'>style</span> &nbsp;"
+            "<span style='color:#63e6be'>prosody</span> &nbsp;"
+            "<span style='color:#f783ac'>nonverbal</span> &nbsp;"
+            "<span style='color:#f4db7d'>SFX</span></div>")
         rows.append("<div style='color:#2e3650'>──────────</div>")
         for line in chapter.lines:
             sid = line.speaker_id
@@ -136,7 +162,8 @@ class ChapterRow(QFrame):
             rows.append(
                 f"<div style='margin:4px 0'>"
                 f"<span style='color:{col};font-weight:700'>{who}</span>{tag} "
-                f"<span style='color:#c9d2e3'>{_html.escape(line.text)}</span></div>")
+                f"<span style='color:#c9d2e3'>{_html.escape(line.text)}</span>"
+                f"{_delivery_html(line.delivery)}</div>")
             for cue in line.sfx:
                 rows.append(
                     f"<div style='color:#f4db7d;margin:0 0 4px 1.6em'>"

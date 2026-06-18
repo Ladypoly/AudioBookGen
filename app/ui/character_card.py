@@ -292,6 +292,8 @@ class CharacterCard(QFrame):
             voice_id=self._char.character_id,
             name=self._char.display_name,
             ref_audio_path=self._char.voice_sample,
+            gender=self._char.gender_guess.value,
+            age=self._char.age_band.value,
         )
 
     def _saved_preview(self) -> str | None:

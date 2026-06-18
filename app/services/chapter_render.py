@@ -36,7 +36,8 @@ def _voice_for(speaker_id: str, by_id: dict[str, Character], proj) -> Voice | No
         preview = proj.preview_path(c.character_id)
         ref = str(preview) if preview.exists() else c.voice_sample
     if ref:
-        return Voice(voice_id=c.character_id, name=c.display_name, ref_audio_path=ref)
+        return Voice(voice_id=c.character_id, name=c.display_name, ref_audio_path=ref,
+                     gender=c.gender_guess.value, age=c.age_band.value)
     return None
 
 

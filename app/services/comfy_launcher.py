@@ -160,10 +160,43 @@ def ensure_stage(stage_name: str) -> None:
 
 
 def ensure_pool(stage_name: str, n: int | None = None) -> list[str]:
-    """One persistent instance now serves everything, so the 'pool' is just it.
-    Returns a single-element URL list (batches render sequentially on it)."""
+    """Render in parallel across `n` instances: the persistent base plus (n-1)
+    extra ones (ports base+1…). Returns all URLs. The extras stay up (reused by
+    the next batch); release_pool() stops them to free VRAM (e.g. before the LLM)."""
+    global _pool, _pool_urls
+    cfg = CONFIG.comfy
+    n = n or cfg.parallel
     _ensure_single(wait=True)
-    return [_url(_base_port())]
+    base = _base_port()
+    urls = [_url(base)]
+    if n <= 1 or not cfg.manage_process:
+        return urls
+    if len(_pool_urls) == n - 1 and all(comfy_service.health_check(u) for u in _pool_urls):
+        return urls + list(_pool_urls)
+    release_pool()
+    extras, extra_urls = [], []
+    for i in range(1, n):
+        port = base + i
+        _kill_on_port(port)
+        extras.append(_spawn(_UNIVERSAL_STAGE, port))
+        extra_urls.append(_url(port))
+    for proc, url in zip(extras, extra_urls):
+        _wait_until_healthy(url, proc)
+    _pool, _pool_urls = extras, extra_urls
+    logger.info("ComfyUI render pool ready: %d instances", n)
+    return urls + extra_urls
+
+
+def release_pool() -> None:
+    """Stop the extra pool instances (keep the persistent base running)."""
+    global _pool, _pool_urls
+    if _pool:
+        logger.info("Releasing %d extra ComfyUI instance(s)", len(_pool))
+    for p in _pool:
+        _terminate(p)
+    for i in range(1, max(2, CONFIG.comfy.parallel)):
+        _kill_on_port(_base_port() + i)
+    _pool, _pool_urls = [], []
 
 
 def free_vram() -> None:

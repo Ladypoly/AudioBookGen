@@ -24,7 +24,7 @@ class ChapterRenderWorker(QThread):
     def __init__(self, chapter: Chapter, characters: list[Character],
                  force: bool = False, test: bool = False,
                  redo_voices: bool = False, redo_ambience: bool = False,
-                 redo_sfx: bool = False,
+                 redo_sfx: bool = False, redo_voices_no_narrator: bool = False,
                  parent: QObject | None = None) -> None:
         super().__init__(parent)
         self._chapter = chapter
@@ -34,6 +34,7 @@ class ChapterRenderWorker(QThread):
         self._redo_voices = redo_voices
         self._redo_ambience = redo_ambience
         self._redo_sfx = redo_sfx
+        self._redo_voices_no_narrator = redo_voices_no_narrator
         self._cancelled = False
 
     def cancel(self) -> None:
@@ -87,9 +88,24 @@ class ChapterRenderWorker(QThread):
                     if need_sfx:
                         sfx_planner.generate_chapter_sfx(proj0, ch, force=self._redo_sfx)
 
+            # Reload characters from the registry so voice references (custom
+            # flag / sample) are current, not whatever was on screen earlier.
+            if proj0 is not None:
+                fresh = project_service.load_characters(proj0)
+                if fresh:
+                    self._chars = fresh
+
+            out_dir = proj0.line_audio_dir / ch.chapter_id if proj0 else None
+            # "Character voices (no narrator)": drop non-narrator clips so they
+            # re-render (cloning the current character previews) while the
+            # narrator's lines are kept untouched.
+            if self._redo_voices_no_narrator and out_dir is not None:
+                for ln in ch.lines:
+                    if ln.speaker_id != line_planner.NARRATOR_ID:
+                        (out_dir / f"{ln.line_id}.mp3").unlink(missing_ok=True)
+
             # If every clip already exists and we're not forcing, this is a pure
             # re-assemble (e.g. tuning pauses) — skip the slow ComfyUI launch.
-            out_dir = proj0.line_audio_dir / ch.chapter_id if proj0 else None
             all_present = bool(ch.lines) and out_dir is not None and all(
                 (out_dir / f"{l.line_id}.mp3").exists() for l in ch.lines)
 

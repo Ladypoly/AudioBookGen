@@ -169,6 +169,7 @@ class ChapterRow(QFrame):
         "ambience": dict(redo_ambience=True),
         "sfx": dict(redo_sfx=True),
         "voices": dict(redo_voices=True),
+        "voices_chars": dict(redo_voices_no_narrator=True),
         "mix": dict(),
     }
 
@@ -178,9 +179,10 @@ class ChapterRow(QFrame):
         box.setText(f"'{self._info['number']}. {self._info['title']}' is already "
                     "rendered.\nWhat do you want to redo?")
         order = [("full", "Full re-render (voices + SFX + ambience)"),
+                 ("voices", "Voices only (all)"),
+                 ("voices_chars", "Character voices only (no narrator)"),
                  ("ambience", "Ambience only"),
                  ("sfx", "SFX only"),
-                 ("voices", "Voices only"),
                  ("mix", "Mix only (fast)")]
         btns = {key: box.addButton(label, QMessageBox.ButtonRole.AcceptRole)
                 for key, label in order}

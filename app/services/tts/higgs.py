@@ -9,6 +9,7 @@ from __future__ import annotations
 import logging
 import random
 import shutil
+import threading
 from pathlib import Path
 
 from app.core.config import CONFIG
@@ -17,6 +18,12 @@ from app.services.tts import tag_builder
 from app.services.tts.base import TTSRequest
 
 logger = logging.getLogger(__name__)
+
+# Prepared-reference cache: a reference is decoded + pitch-checked once per
+# (voice, source file), not for every line of a chapter. Guarded for the
+# parallel render pool.
+_REF_CACHE: dict = {}
+_REF_LOCK = threading.Lock()
 
 
 class HiggsTTSEngine:
@@ -42,10 +49,18 @@ class HiggsTTSEngine:
 
     # --- helpers -------------------------------------------------------------
 
+    # Higgs can't clone an extremely deep voice — below ~this Hz it drifts up
+    # (even into a female voice). So if a reference is deeper, pitch it up to
+    # the target before cloning.
+    _PITCH_FLOOR_HZ = 105.0
+    _PITCH_TARGET_HZ = 115.0
+
     def _ensure_reference(self, voice) -> str:
-        """Higgs LoadAudio reads from ComfyUI's input/ folder. Copy the voice's
-        reference there AS-IS (no re-encode — keep the exact format that works)
-        under a stable per-voice name, always overwriting so the content is fresh."""
+        """Put a clone-ready reference into ComfyUI's input/ and return its name.
+        Non-WAV sources are decoded to PCM WAV (Higgs drifts on MP3 refs), and a
+        too-deep reference is pitch-lifted so Higgs can actually clone it.
+        Prepared once per (voice, file) — cached so a chapter's 100 lines don't
+        re-analyse the same clip."""
         if voice is None or not voice.ref_audio_path:
             return CONFIG.comfy.default_reference_audio
         src = Path(voice.ref_audio_path)
@@ -56,12 +71,43 @@ class HiggsTTSEngine:
         input_dir.mkdir(parents=True, exist_ok=True)
         ref_name = f"ref_{voice.voice_id}.wav"
         dst = input_dir / ref_name
-        # Higgs clones WAV references faithfully but DRIFTS (even flips gender)
-        # on MP3 references — so decode non-WAV sources to PCM WAV. WAV sources
-        # are copied byte-for-byte (don't touch what already works).
-        if src.suffix.lower() == ".wav":
-            shutil.copyfile(src, dst)
-        else:
-            from pydub import AudioSegment
-            AudioSegment.from_file(src).export(dst, format="wav")
+        try:
+            key = (voice.voice_id, str(src), src.stat().st_mtime)
+        except OSError:
+            key = None
+        with _REF_LOCK:
+            if key is not None and _REF_CACHE.get(key) and dst.exists():
+                return ref_name
+            if src.suffix.lower() == ".wav":
+                shutil.copyfile(src, dst)
+            else:
+                from pydub import AudioSegment
+                AudioSegment.from_file(src).export(dst, format="wav")
+            self._lift_if_too_deep(dst)
+            if key is not None:
+                _REF_CACHE[key] = True
         return ref_name
+
+    def _lift_if_too_deep(self, dst: Path) -> None:
+        """If the reference's pitch is below Higgs' clonable floor, shift it up
+        to the target so cloning keeps the (male) voice instead of drifting."""
+        try:
+            import math
+
+            import librosa
+            import numpy as np
+            import soundfile as sf
+            y, sr = librosa.load(str(dst), sr=None, mono=True)
+            f0, _, _ = librosa.pyin(y, fmin=60, fmax=400, sr=sr)
+            f0 = f0[~np.isnan(f0)]
+            if f0.size == 0:
+                return
+            med = float(np.median(f0))
+            if 0 < med < self._PITCH_FLOOR_HZ:
+                steps = 12.0 * math.log2(self._PITCH_TARGET_HZ / med)
+                shifted = librosa.effects.pitch_shift(y, sr=sr, n_steps=steps)
+                sf.write(str(dst), shifted, sr)
+                logger.info("Lifted reference %.0fHz -> ~%.0fHz (+%.1f st) for cloning",
+                            med, self._PITCH_TARGET_HZ, steps)
+        except Exception:  # noqa: BLE001
+            logger.warning("pitch-lift skipped", exc_info=True)

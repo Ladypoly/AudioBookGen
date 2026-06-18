@@ -1,0 +1,38 @@
+{
+  "1": {
+    "class_type": "CheckpointLoaderSimple",
+    "inputs": { "ckpt_name": "stable_audio_3_medium.safetensors" }
+  },
+  "2": {
+    "class_type": "CLIPLoader",
+    "inputs": { "clip_name": "t5gemma_b_b_ul2.safetensors", "type": "stable_audio", "device": "default" }
+  },
+  "3": {
+    "class_type": "CLIPTextEncode",
+    "inputs": { "text": "{prompt}", "clip": ["2", 0] }
+  },
+  "4": {
+    "class_type": "CLIPTextEncode",
+    "inputs": { "text": "{negative}", "clip": ["2", 0] }
+  },
+  "5": {
+    "class_type": "EmptyLatentAudio",
+    "inputs": { "seconds": "{seconds}", "batch_size": 1 }
+  },
+  "6": {
+    "class_type": "KSampler",
+    "inputs": {
+      "seed": "{seed}", "steps": 8, "cfg": 1, "sampler_name": "lcm",
+      "scheduler": "simple", "denoise": 1,
+      "model": ["1", 0], "positive": ["3", 0], "negative": ["4", 0], "latent_image": ["5", 0]
+    }
+  },
+  "7": {
+    "class_type": "VAEDecodeAudio",
+    "inputs": { "samples": ["6", 0], "vae": ["1", 2] }
+  },
+  "8": {
+    "class_type": "SaveAudioMP3",
+    "inputs": { "filename_prefix": "{filename_prefix}", "quality": "V0", "audio": ["7", 0] }
+  }
+}

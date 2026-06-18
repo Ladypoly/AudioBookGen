@@ -1,0 +1,46 @@
+# --- Generated content (never commit) ---
+# per-book extracted data, plans, audio, covers
+projects/
+# demo Hoerspiel clips + preview
+demo/
+# voice-optimize output
+optimized/
+# generated portraits
+renders/
+# generated / shared voice library
+voices/
+logs/
+
+# --- Downloaded model weights (kept local via models/) ---
+models/
+*.safetensors
+*.ckpt
+*.pth
+*.pt
+*.onnx
+*.bin
+*.gguf
+
+# --- Source books / user content ---
+*.pdf
+
+# --- User config (may hold API keys) ---
+settings.json
+.claude/settings.local.json
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# --- OS / editor ---
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

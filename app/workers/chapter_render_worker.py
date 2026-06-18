@@ -1,0 +1,108 @@
+"""Background worker that renders one chapter to audio."""
+
+from __future__ import annotations
+
+import logging
+
+from PySide6.QtCore import QObject, QThread, Signal
+
+from app.schemas.characters import Character
+from app.schemas.script import Chapter
+from app.services import (
+    ambience, chapter_render, chapter_service, comfy_launcher, line_planner,
+    music_planner, ollama_service, project_service, sfx_planner, sound_service,
+)
+
+logger = logging.getLogger(__name__)
+
+
+class ChapterRenderWorker(QThread):
+    progress = Signal(int, int, str)   # line done, total, speaker
+    finished_ok = Signal(str, str)     # chapter_id, audio path
+    failed = Signal(str)               # error
+
+    def __init__(self, chapter: Chapter, characters: list[Character],
+                 force: bool = False, test: bool = False,
+                 parent: QObject | None = None) -> None:
+        super().__init__(parent)
+        self._chapter = chapter
+        self._chars = characters
+        self._force = force
+        self._test = test
+        self._cancelled = False
+
+    def cancel(self) -> None:
+        self._cancelled = True
+
+    def run(self) -> None:  # noqa: D102
+        try:
+            from pathlib import Path
+
+            from app.services import project_service as ps
+            ch = self._chapter
+            # Use an agent-curated plan as-is; otherwise (re)plan heuristically
+            # from text (deterministic + instant, so it never goes stale).
+            if not (ch.curated and ch.lines):
+                ch.lines = line_planner.plan_chapter(ch, self._chars)
+            line_planner.prepend_title(ch)      # narrator announces the title
+            if self._test:  # only the first pages (narrator + a few dialogues)
+                ch.lines = line_planner.test_slice(ch.lines)
+            force = self._force or self._test   # tests always render fresh
+            proj0 = ps.active()
+
+            # A chapter render is self-contained: generate its scene audio
+            # (ambience bed + discrete SFX) if missing, so it gets blended in.
+            if proj0 is not None:
+                from app.core.config import CONFIG
+                sfx_planner.annotate(ch.lines)
+                need_amb = (CONFIG.tts.ambience_enabled
+                            and not proj0.ambience_path(ch.chapter_id).exists())
+                need_mus = (CONFIG.tts.music_enabled
+                            and not proj0.music_path(ch.chapter_id).exists())
+                need_sfx = CONFIG.tts.sfx_enabled and any(
+                    not proj0.sfx_clip_path(c).exists() for c in sfx_planner.cues_for(ch))
+                if need_amb or need_mus or need_sfx:
+                    self.progress.emit(0, 0, "Generating scene audio")
+                    ollama_service.unload()
+                    comfy_launcher.ensure_stage("audio")
+                    if need_amb:
+                        prompt, secs = ambience.ambience_for_chapter(ch)
+                        sound_service.generate(prompt, secs,
+                                               proj0.ambience_path(ch.chapter_id),
+                                               kind="ambience")
+                    if need_mus:
+                        prompt, secs = music_planner.music_for_chapter(ch)
+                        sound_service.generate(prompt, secs,
+                                               proj0.music_path(ch.chapter_id),
+                                               kind="music")
+                    if need_sfx:
+                        sfx_planner.generate_chapter_sfx(proj0, ch)
+
+            # If every clip already exists and we're not forcing, this is a pure
+            # re-assemble (e.g. tuning pauses) — skip the slow ComfyUI launch.
+            out_dir = proj0.line_audio_dir / ch.chapter_id if proj0 else None
+            all_present = bool(ch.lines) and out_dir is not None and all(
+                (out_dir / f"{l.line_id}.mp3").exists() for l in ch.lines)
+
+            if force or not all_present:
+                ollama_service.unload()
+                urls = comfy_launcher.ensure_pool("tts")
+                chapter_render.render_lines(
+                    ch, self._chars,
+                    progress=lambda d, t, n: self.progress.emit(d, t, n),
+                    is_cancelled=lambda: self._cancelled,
+                    urls=urls, force=force,
+                )
+            else:
+                self.progress.emit(0, 0, "Re-assembling")
+                for l in ch.lines:  # point lines at their existing clips
+                    l.audio_path = str(out_dir / f"{l.line_id}.mp3")
+
+            path = chapter_render.assemble(ch, suffix="_test" if self._test else "")
+            proj = project_service.active()
+            if proj is not None and not self._test:  # don't persist a slice
+                chapter_service.save_chapter(proj, ch)
+            self.finished_ok.emit(ch.chapter_id, path or "")
+        except Exception as err:  # noqa: BLE001
+            logger.exception("Chapter render failed")
+            self.failed.emit(str(err))

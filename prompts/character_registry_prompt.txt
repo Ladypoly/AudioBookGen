@@ -1,0 +1,72 @@
+# prompt_version: 1
+# engine: Ollama (huihui_ai/gemma-4-abliterated:26b)
+# role: REDUCE pass - merge mention candidates into a canonical character registry (spoiler-safe)
+
+You are building a canonical CHARACTER REGISTRY from candidate mentions collected across a whole book.
+You output STRICT JSON only. No prose, no markdown, no commentary.
+
+INPUT
+A list of candidate characters. Each candidate has a surface_name, gender_guess, age_band,
+merged vocal_traits, merged appearance_traits, and total_mentions across the book.
+
+TASK
+1. MERGE aliases that clearly refer to the same character (e.g. "Anna", "Frau Berg",
+   "die junge Lehrerin" may be one person). Pick the clearest proper name as display_name;
+   list the rest in aliases. Be conservative: only merge when confident.
+2. Keep the narrator ("Erzähler"/"Narrator") as its own separate character if present.
+3. For each canonical character, write:
+   - a short neutral voice_hint (one phrase, vocal attributes only)
+   - short neutral personality_notes (1 sentence, surface demeanor only, NO plot)
+   - an appearance_description: one neutral sentence describing physical looks for
+     a PORTRAIT (hair, eyes, build, age, typical clothing). Surface looks only,
+     no plot, no spoilers. If looks are unknown, give a brief plausible-neutral
+     description consistent with gender_guess/age_band (e.g. "An adult man with
+     short brown hair and a plain coat.").
+4. Set needs_review = true if the merge was uncertain or data is thin.
+
+=== SPOILER FIREWALL (hard rules, never violate) ===
+- voice_hint and personality_notes describe ONLY vocal/surface demeanor.
+- NO plot, NO arcs, NO reveals, NO "later becomes", NO motivation tied to story events.
+- Do NOT invent a role in the story. Importance is computed elsewhere from mention counts.
+
+ENUMS (use EXACTLY these values):
+- gender_guess: "male" | "female" | "ambiguous" | "unknown"
+- age_band: "child" | "teen" | "young_adult" | "adult" | "elderly" | "unknown"
+
+For each canonical character emit:
+- display_name: clearest proper name
+- aliases: array of other surface names merged into this character (may be empty)
+- gender_guess: enum (most consistent across merged candidates)
+- age_band: enum
+- voice_hint: short phrase, vocal only
+- personality_notes: one neutral sentence, surface demeanor only
+- vocal_traits: array of merged short vocal-trait strings
+- appearance_traits: array of merged short appearance-trait strings
+- appearance_description: one neutral sentence for portrait generation
+- total_mentions: integer sum across merged candidates
+- needs_review: boolean
+
+OUTPUT FORMAT (return EXACTLY this shape):
+{
+  "characters": [
+    {
+      "display_name": "Anna",
+      "aliases": ["Frau Berg"],
+      "gender_guess": "female",
+      "age_band": "young_adult",
+      "voice_hint": "soft, warm, measured pace",
+      "personality_notes": "Calm and soft-spoken in manner.",
+      "vocal_traits": ["soft", "warm", "measured"],
+      "appearance_traits": ["long dark hair", "green eyes", "slim"],
+      "appearance_description": "A slim young woman with long dark hair and green eyes, dressed plainly.",
+      "total_mentions": 42,
+      "needs_review": false
+    }
+  ]
+}
+
+CANDIDATES:
+---
+{candidates_json}
+---
+Return only the JSON object.

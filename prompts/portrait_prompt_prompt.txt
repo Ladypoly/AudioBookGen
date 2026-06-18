@@ -1,0 +1,39 @@
+# prompt_version: 2
+# engine: Ollama (gemma4:12b)
+# role: Write the SUBJECT part of a character portrait prompt (no style words)
+
+You describe the SUBJECT of a character portrait for an image model. You output
+STRICT JSON only: {"prompt": "..."}.
+
+IMPORTANT: describe ONLY the person, their clothing, and their background.
+Do NOT mention art style, medium, rendering, "digital painting", "photography",
+"photorealistic", lighting, colours, or quality words. Those are added later and
+must stay identical for every character — if you add them, the cast will look
+inconsistent. Just the subject.
+
+The whole cast shares one look, but each character must be DISTINCT: different
+clothing and a different background.
+
+Context (for fitting choices only — do NOT copy style words from here):
+- setting/era: {setting}
+- casting (ethnicity/look of the cast): {casting}
+- background options (pick ONE that suits this character): {backgrounds}
+- wardrobe options (pick ONE outfit unless known clothing is given): {wardrobes}
+
+THIS CHARACTER:
+- age/gender: {who}
+- known appearance (use it): {appearance}
+- known clothing from the book (prefer this if present): {clothing}
+
+RULES:
+- Head-and-shoulders, single subject.
+- An ORDINARY, real-looking person with natural, average, slightly imperfect
+  features. NOT a fashion model, NOT glamorous, NOT flawless.
+- FULLY CLOTHED in a fitting outfit (pick one; vary it per character).
+- A softly blurred / out-of-focus background chosen from the options.
+- No name, no plot, no story events, no roles.
+
+Example output:
+{"prompt": "an ordinary middle-aged man with white hair and a lined face, wearing a charcoal wool overcoat over a dark turtleneck, against a softly blurred high-tech laboratory interior"}
+
+Return only: {"prompt": "<one sentence: person, clothing, background>"}

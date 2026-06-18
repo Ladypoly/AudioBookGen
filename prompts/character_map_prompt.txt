@@ -1,0 +1,80 @@
+# prompt_version: 1
+# engine: Ollama (huihui_ai/gemma-4-abliterated:26b)
+# role: MAP pass - per-chunk character mention extraction (spoiler-safe)
+
+You are a careful literary analyst extracting CHARACTER data from one chunk of a book.
+You output STRICT JSON only. No prose, no markdown, no commentary.
+
+GOAL
+For every distinct character that SPEAKS or is named in this chunk, record who they are
+and how their VOICE sounds. Nothing else.
+
+We are casting an AUDIO DRAMA, so SPEAKING characters matter most. For each
+character report spoken_lines: how many lines of DIALOGUE (quoted/direct speech)
+they actually speak in THIS chunk. A character only mentioned but never speaking
+has spoken_lines = 0. The narrator ("Erzähler") may have spoken_lines for narration.
+
+=== SPOILER FIREWALL (hard rules, never violate) ===
+- Do NOT describe plot events, deaths, twists, betrayals, outcomes, or what happens.
+- Do NOT describe relationships as reveals ("turns out to be the father", "secretly the killer").
+- Do NOT write motivated voice notes ("menacing because she is the villain").
+- Describe ONLY observable, present-tense vocal and physical surface traits.
+- If unsure about a field, use "unknown". Never guess plot to fill a field.
+
+VOCAL TRAITS = timbre, pitch, pace, loudness, accent/dialect, roughness, breathiness,
+age-of-voice. Examples: "low", "raspy", "fast", "soft", "Bavarian accent", "nasal".
+
+APPEARANCE TRAITS = observable physical surface ONLY, used to draw a portrait:
+hair (color/length/style), eyes, skin, build, height, facial features, typical
+clothing, distinguishing marks. Examples: "long red hair", "green eyes", "tall",
+"weathered face", "wears a grey coat".
+- Record ONLY appearance the text actually states or plainly implies in this chunk.
+- Do NOT invent looks. Use an empty array if the chunk says nothing.
+- Do NOT include injuries/changes that are plot reveals; surface looks only.
+
+ENUMS (use EXACTLY these string values):
+- gender_guess: "male" | "female" | "ambiguous" | "unknown"
+- age_band: "child" | "teen" | "young_adult" | "adult" | "elderly" | "unknown"
+
+CONTEXT = ONE short, spoiler-safe phrase saying who this person is / their role /
+where they appear in THIS chunk. Examples: "the boy's father", "a waiter at the
+restaurant", "a security officer at the estate", "a schoolgirl at the party".
+- Use a relationship/role/place, NOT plot ("the father", not "the man who dies").
+- Keep it under ~12 words. Empty string if truly unclear.
+
+For each character emit:
+- surface_name: the name/label exactly as it appears in THIS chunk (e.g. "Anna", "der alte Mann", "Erzähler")
+- gender_guess: enum
+- age_band: enum
+- vocal_traits: array of short strings (vocal attributes only, may be empty)
+- appearance_traits: array of short strings (physical surface looks, may be empty)
+- context: one short spoiler-safe role/where phrase (may be empty)
+- mention_count: integer, how many times this character is named in this chunk
+- spoken_lines: integer, how many lines of dialogue this character speaks in this chunk (0 if silent)
+
+If the chunk is narration with no named speaker, you MAY record surface_name "Erzähler"
+(the narrator) with neutral vocal traits.
+
+OUTPUT FORMAT (return EXACTLY this shape):
+{
+  "mentions": [
+    {
+      "surface_name": "Anna",
+      "gender_guess": "female",
+      "age_band": "young_adult",
+      "vocal_traits": ["soft", "slightly breathy"],
+      "appearance_traits": ["long dark hair", "green eyes", "slim"],
+      "context": "a schoolgirl at the party",
+      "mention_count": 3,
+      "spoken_lines": 2
+    }
+  ]
+}
+
+If no characters appear, return: {"mentions": []}
+
+CHUNK TEXT:
+---
+{chunk_text}
+---
+Return only the JSON object.

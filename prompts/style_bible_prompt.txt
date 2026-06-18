@@ -1,0 +1,92 @@
+# prompt_version: 1
+# engine: Ollama (gemma4:12b)
+# role: Build a spoiler-safe visual Style Bible for the whole book
+
+You define ONE coherent visual style for illustrated character portraits and
+covers for a book. You output STRICT JSON only. No prose, no markdown.
+
+GOAL
+From the book title and a short sample, infer the GENRE, ERA/SETTING feel, and
+overall MOOD, then choose a single illustration style that fits. Every
+character portrait will use this exact style, so it must be generic enough to
+suit any character yet specific to the book's world.
+
+=== SPOILER FIREWALL ===
+- Use only genre, era, setting atmosphere and mood.
+- NO plot, NO events, NO character names, NO specific scenes.
+- Describe a STYLE, not the story.
+
+Fields (return EXACTLY this shape):
+- genre: short genre label (e.g. "science fiction thriller", "cozy mystery")
+- art_style: a STYLIZED ILLUSTRATION style — painterly / graphic-novel /
+  concept-art look, clearly NOT photorealistic and NOT a photograph (e.g.
+  "stylized painterly character illustration", "graphic-novel concept art",
+  "semi-realistic painted illustration with visible brushwork"). It must read as
+  illustrated artwork, not a photo.
+- aesthetics: 1 phrase of style keywords
+- lighting: 1 phrase describing lighting feel
+- medium: medium type (e.g. "digital illustration", "painted illustration")
+- color_palette: 3-6 UPPERCASE hex colors (#RRGGBB) that fit the book's mood
+- background: an atmospheric portrait backdrop that FITS THE BOOK'S WORLD
+  (its genre, era and place), kept softly blurred / out of focus so the person
+  stays the subject. Evocative but generic — NO specific identifiable location,
+  NO scene, NO plot, NO event (e.g. "softly blurred futuristic European city at
+  dusk", "out-of-focus warm Victorian interior", "hazy misty forest bokeh")
+- background_variants: a list of 4-6 DISTINCT such backdrops, all fitting the
+  same world but different from each other (so different characters get
+  different backgrounds). Same rules: softly blurred, generic, spoiler-safe
+- setting: era + place of the book (e.g. "near-future Europe", "Victorian London",
+  "contemporary USA") — used so character portraits fit the world
+- casting: a FIRM dominant ethnicity/look for the cast, stated clearly so the
+  image model doesn't default to its own bias (e.g. "European Caucasian
+  features", "South Asian features", "West African features"). Pick the single
+  most fitting one for the setting; avoid vague words like "varied" or "diverse"
+- wardrobe: the clothing style characters would wear (e.g. "modern European
+  smart-casual", "1920s period attire", "utilitarian sci-fi jumpsuits").
+  Characters must be FULLY CLOTHED in this style
+- wardrobe_variants: a list of 4-6 DISTINCT specific outfits in that style,
+  different from each other (e.g. "charcoal wool overcoat over a turtleneck",
+  "rust cardigan and collared shirt", "navy field jacket"), so different
+  characters wear different clothes
+
+Example (for a near-future sci-fi novel):
+{
+  "genre": "near-future science fiction",
+  "art_style": "stylized painterly sci-fi concept-art illustration, visible brushwork, not photorealistic",
+  "aesthetics": "sleek, cinematic, restrained detail",
+  "lighting": "cool soft key light with subtle rim light",
+  "medium": "digital illustration",
+  "color_palette": ["#0E1726", "#2A6F97", "#8ECAE6", "#E9EDF2", "#C9A227"],
+  "background": "softly blurred futuristic European city skyline at dusk, bokeh",
+  "background_variants": [
+    "softly blurred futuristic European city skyline at dusk, bokeh",
+    "out-of-focus clean high-tech laboratory interior",
+    "hazy modern glass office at night, soft bokeh lights",
+    "blurred quiet residential street, overcast daylight",
+    "dim out-of-focus transit station, cool ambient glow"
+  ],
+  "setting": "near-future Europe",
+  "casting": "European Caucasian features",
+  "wardrobe": "modern European smart-casual clothing",
+  "wardrobe_variants": [
+    "charcoal wool overcoat over a dark turtleneck",
+    "rust-coloured cardigan and a collared shirt",
+    "navy technical field jacket",
+    "simple grey knit sweater",
+    "olive utility jacket over a henley"
+  ]
+}
+
+BOOK TITLE:
+{book_title}
+
+WEB CONTEXT (optional, may be empty — use only for genre/era/mood, ignore plot):
+---
+{web_context}
+---
+
+SAMPLE (style/atmosphere only):
+---
+{sample_text}
+---
+Return only the JSON object.

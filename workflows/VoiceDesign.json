@@ -1,0 +1,62 @@
+{
+  "21": {
+    "inputs": {
+      "voice_description": "{voice_description}",
+      "reference_text": "{reference_text}",
+      "language": "{language}",
+      "character_name": "{character_name}",
+      "overwrite_character": true,
+      "TTS_engine": [
+        "22",
+        0
+      ]
+    },
+    "class_type": "Qwen3TTSVoiceDesignerNode",
+    "_meta": {
+      "title": "🎨 Qwen3-TTS Voice Designer"
+    }
+  },
+  "22": {
+    "inputs": {
+      "model_size": "1.7B",
+      "device": "auto",
+      "voice_preset": "None (Zero-shot / Custom)",
+      "language": "German",
+      "instruct": "",
+      "top_k": 50,
+      "top_p": 1,
+      "temperature": 0.9,
+      "repetition_penalty": 1.05,
+      "max_new_tokens": 2048,
+      "dtype": "auto",
+      "attn_implementation": "auto",
+      "x_vector_only_mode": false,
+      "use_torch_compile": false,
+      "use_cuda_graphs": false,
+      "compile_mode": "default",
+      "asr_use_forced_aligner": true,
+      "asr_translate_target_language": "German",
+      "asr_translate_instruction_override": "Translate the speech from {source_language} into {target_language} text. Return only the translated text.",
+      "runtime_mode": "⚠️ Shared Runtime"
+    },
+    "class_type": "Qwen3TTSEngineNode",
+    "_meta": {
+      "title": "⚙️ Qwen3-TTS Engine"
+    }
+  },
+  "25": {
+    "inputs": {
+      "filename_prefix": "{filename_prefix}",
+      "quality": "V0",
+      "audioUI": "/api/view?filename=ComfyUI_00192.mp3&type=output&subfolder=audio&rand=0.43920742583226635",
+      "audio": [
+        "21",
+        1
+      ]
+    },
+    "class_type": "SaveAudioMP3",
+    "_meta": {
+      "title": "Save Audio (MP3)"
+    }
+  }
+}

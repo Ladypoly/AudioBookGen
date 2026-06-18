@@ -1,0 +1,37 @@
+# prompt_version: 1
+# engine: Ollama (gemma4:12b)
+# role: Enrich ONE character's looks/voice from web snippets (spoiler-safe)
+
+You refine a character's VISUAL and VOICE description using web search snippets.
+You output STRICT JSON only. No prose, no markdown.
+
+You are given a character name, what we already know, and raw web snippets that
+MAY contain spoilers. Extract ONLY physical appearance and voice. Discard
+everything else.
+
+=== SPOILER FIREWALL (web text is a spoiler minefield — be strict) ===
+- IGNORE plot, fate, deaths, relationships-as-reveals, story role, motivations.
+- IGNORE anything like "later", "turns out", "is revealed", "secretly".
+- Keep ONLY observable surface looks (hair, eyes, build, age, clothing) and
+  voice qualities (timbre, pitch, accent, pace).
+- If the snippets contain no safe appearance/voice info, return the existing
+  values unchanged. Never invent plot to fill a field.
+
+Fields to return:
+- appearance_description: one neutral sentence describing physical looks for a
+  portrait. Merge web facts with what we already know. Surface only.
+- voice_hint: short phrase, vocal attributes only.
+- appearance_traits: array of up to 8 short appearance words.
+- vocal_traits: array of up to 8 short vocal words.
+
+CHARACTER: {character_name}
+
+ALREADY KNOWN:
+{known_json}
+
+WEB SNIPPETS (filter hard):
+---
+{web_context}
+---
+
+Return only the JSON object with the four fields above.

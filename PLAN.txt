@@ -1,0 +1,1080 @@
+You are building a polished local-first desktop application called "Book2AudioDrama".
+
+Goal:
+Create a Windows-first desktop app that turns a user-provided PDF book into a fully automated German audio drama with:
+1. LLM-based book analysis and scene planning
+2. multi-character voice assignment
+3. expressive TTS
+4. generated SFX and short atmospheric music
+5. automatic mixing and chapter export
+6. optional chapter cover generation with a consistent visual style
+7. a clean, modern, beautiful UI
+8. spoiler-safe workflow
+
+Core model stack:
+- LLM analysis and orchestration: Ollama with gemma4:26b
+- Main TTS engine: Higgs Audio v3
+- SFX and music generation: Stable Audio 3
+- Chapter cover generation: Z-Image Turbo or Ideogram 4 through ComfyUI
+- Audio assembly and mastering: ffmpeg + Python audio tools
+
+Important product constraints:
+- This is a local application. Do not require cloud APIs.
+- Use ComfyUI only as a render backend for Higgs Audio v3, Stable Audio 3, and chapter cover image generation.
+- The app itself must own the workflow logic, project management, UI, caching, scheduling, and export pipeline.
+- The app must support long-running jobs, resumable pipelines, caching, queueing, and recovery after crashes.
+- The app must avoid spoiling the book during processing. The user should be able to run everything without seeing summaries or detailed content.
+- The tool should be suitable for personal use on a PC with an RTX 4090 and local models.
+- The system should be modular so that future engines can be swapped in later.
+
+Technical stack:
+- Language: Python 3.11
+- Desktop UI: PySide6
+- UI style: modern dark theme, elegant, smooth, minimal, polished
+- Recommended UI helpers: qfluentwidgets or an equivalent polished component library for PySide6
+- Data storage: SQLite for structured project metadata, plus JSON sidecar files for caches and artifacts
+- Background tasks: asyncio + QThreadPool or a robust task manager that keeps UI responsive
+- Audio tools: ffmpeg, pydub, pyloudnorm, soundfile, librosa where needed
+- PDF/text extraction: pymupdf / fitz, pypdf, optional OCR with tesseract if scanned pages are detected
+- Optional local ASR for QC: faster-whisper
+- ComfyUI integration: direct HTTP API client
+- Ollama integration: direct HTTP API client
+
+Build this as a proper application, not a prototype notebook.
+
+High-level architecture:
+1. Desktop app shell
+2. Project manager
+3. PDF/text import and preprocessing
+4. LLM analysis pipeline
+5. Character registry and voice assignment
+6. TTS render pipeline
+7. SFX/music render pipeline
+8. Image cover render pipeline
+9. Audio mixing and mastering pipeline
+10. QC and rerender manager
+11. Export manager
+12. Settings and diagnostics
+13. Local cache and artifact browser
+
+Main product concept:
+The user imports a book PDF and creates a project.
+The app extracts and cleans text, detects chapters, scans for characters, builds a voice registry, plans scenes, generates expressive TTS lines with Higgs Audio v3, generates non-vocal SFX and short atmospheric music cues with Stable Audio 3, mixes everything automatically, and exports chapter audio and full audiobook output.
+Additionally, the app can generate one visually consistent cover per chapter using Z-Image Turbo or Ideogram 4 in ComfyUI, based on a shared series style bible.
+
+Key UX principle:
+The app must have a "Spoiler-safe mode" enabled by default.
+In spoiler-safe mode:
+- never display chapter summaries by default
+- never display extracted story text by default
+- show only progress, counts, health, durations, and generic labels
+- if the user opens advanced detail panels, require explicit reveal buttons
+- for character voice assignment, show only character name, role importance, voice hint, and a very short neutral description with no plot details
+
+UI requirements:
+Build a beautiful, polished desktop UI with:
+- left sidebar navigation
+- main content area
+- top status bar
+- bottom queue/progress strip
+
+Primary screens:
+1. Dashboard
+   - recent projects
+   - create new project
+   - open existing project
+   - model/backend health status
+   - quick settings summary
+
+2. New Project Wizard
+   - choose PDF
+   - choose output folder
+   - choose language
+   - choose spoiler-safe mode
+   - choose chapter split strategy
+   - choose render quality presets
+   - choose whether to generate chapter covers
+   - choose whether to auto-generate SFX/music
+   - validate ComfyUI and Ollama availability
+
+3. Project Overview
+   - project metadata
+   - processing progress
+   - chapter count
+   - character count
+   - current queue
+   - start/pause/resume/cancel buttons
+   - last successful step
+   - quick export buttons
+
+4. Chapters screen
+   - chapter list
+   - status per chapter: imported, analyzed, voices assigned, rendered, mixed, exported
+   - duration estimate
+   - rerender button
+   - optional spoiler-safe hidden details
+   - chapter cover preview
+
+5. Characters screen
+   - character cards
+   - name
+   - importance level: narrator, main, secondary, minor
+   - gender guess
+   - age guess
+   - personality/voice hint
+   - assigned voice sample
+   - preview buttons
+   - bulk assignment actions
+   - manual override controls
+   - ability to upload/add reference voice samples for Higgs cloning
+   - voice assignment should not require plot spoilers
+
+6. Voices Library screen
+   - stored voice references
+   - voice cards with preview
+   - tags like calm narrator, young female, elderly male, rough voice, childlike, etc.
+   - import sample
+   - trim sample
+   - normalize sample
+   - assign to character
+   - duplicate or archive
+
+7. Covers screen
+   - global series style settings
+   - cover generator backend selector: Z-Image Turbo or Ideogram 4
+   - series style bible editor
+   - master cover preview
+   - chapter cover gallery
+   - regenerate individual chapter cover
+   - maintain style consistency across all covers
+
+8. Queue/Jobs screen
+   - all jobs
+   - pending/running/done/failed
+   - per-job logs
+   - retry failed jobs
+   - priority order
+
+9. Settings screen
+   - Ollama URL
+   - ComfyUI URL
+   - ffmpeg path
+   - output paths
+   - cache size and cleanup
+   - model workflow paths
+   - default loudness targets
+   - default export formats
+   - spoiler-safe toggle
+   - advanced prompts and schemas
+   - theme and UI options
+
+10. Diagnostics screen
+   - backend checks
+   - GPU memory estimates
+   - last errors
+   - log viewer
+   - test render buttons for TTS, SFX, music, and cover generation
+
+Workflow design:
+The app should run the pipeline in stages with resumable checkpoints.
+
+Pipeline stages:
+A. Import and text cleanup
+B. Chapter and scene segmentation
+C. Character extraction
+D. Character merge and registry creation
+E. Voice assignment
+F. Detailed scene planning
+G. TTS line rendering
+H. SFX generation
+I. Music cue generation
+J. Chapter cover generation
+K. Scene mixing
+L. Chapter mastering
+M. Full audiobook export
+N. QC and rerender pass
+
+Text import and cleanup details:
+- support PDF first
+- detect if scanned
+- if scanned, OCR
+- remove page numbers, headers, footers where possible
+- repair broken line wraps and hyphenation
+- preserve paragraphs and quotation structure
+- detect chapter boundaries
+- assign stable chapter IDs
+- store raw text and cleaned text separately
+- never destroy source material
+
+LLM orchestration details:
+Use gemma4:26b in Ollama for all analysis.
+Do not use a smaller model in V1.
+The same model can be used in multiple passes for higher consistency.
+
+Use structured JSON outputs only.
+Define strict JSON schemas and validate all LLM responses.
+On invalid output:
+- retry with corrective prompt
+- if still invalid, log error and mark chunk for manual rerun
+- never let freeform LLM text break the pipeline
+
+LLM analysis should happen in these passes:
+
+Pass 1: Book structure scan
+Input: cleaned chapter text in chunks
+Output:
+- chapter list
+- probable scenes
+- probable character mentions
+- narrator mode
+- tone/mood hints
+- notable recurring environments
+- possible pronunciation notes
+Goal:
+- fast structural understanding
+- no final speaker decisions yet
+
+Pass 2: Character registry build
+Input: all character candidates across chapters
+Output:
+- canonical characters
+- aliases and alternate names
+- gender guess
+- age guess
+- personality traits
+- voice recommendations
+- role importance
+- narration relevance
+Goal:
+- merge duplicate names and aliases
+- create a stable character database
+
+Pass 3: Scene and line planning
+Input: each chapter scene
+Output:
+- ordered line items
+- each item type: narration, dialogue, internal monologue, ambience cue, SFX cue, music cue
+- speaker assignment
+- expressive delivery hints
+- timing hints
+Goal:
+- transform prose into audio-drama-friendly structure
+
+Pass 4: Rendering metadata generation
+For each spoken line output:
+- speaker id
+- text
+- emotion
+- style
+- prosody
+- pre_pause_ms
+- post_pause_ms
+- optional nonverbal voice tags
+- optional accompanying ambience tag
+For each SFX/music cue output:
+- type
+- placement
+- duration target
+- prompt
+- intensity
+- priority
+- whether ducking is required
+
+Example internal schema for spoken lines:
+{
+  "line_id": "ch03_sc05_ln014",
+  "scene_id": "ch03_sc05",
+  "chapter_id": "ch03",
+  "type": "dialogue",
+  "speaker_id": "char_anna",
+  "text": "Was war das?",
+  "delivery": {
+    "emotion": "fear",
+    "style": "whispering",
+    "prosody": ["pause_short"],
+    "pre_pause_ms": 200,
+    "post_pause_ms": 350,
+    "nonverbal": ["breath"]
+  },
+  "render": {
+    "voice_id": "voice_anna_01",
+    "engine": "higgs_v3"
+  }
+}
+
+Character registry requirements:
+Create a persistent character registry with:
+- character_id
+- display_name
+- aliases
+- gender_guess
+- age_guess
+- role_importance
+- personality_notes
+- voice_hint
+- assigned_voice_id
+- notes_hidden_by_default
+- active flag
+
+Role importance categories:
+- narrator
+- main
+- secondary
+- minor
+- crowd
+
+Voice assignment requirements:
+V1 uses Higgs Audio v3 only for final spoken output.
+Support:
+- assign a voice reference sample to a character
+- preview assigned voice
+- import WAV/MP3 reference samples
+- basic sample trimming and cleanup
+- persistent voice library
+- bulk assign from presets
+- narrator should have a dedicated stable voice
+- characters without assigned voice can fall back to a neutral temporary voice profile, but must be flagged for review
+
+Important:
+Do not implement external voice-design generation in V1.
+However, design the architecture so future "voice design providers" can be plugged in later.
+Create an interface for future providers, but keep them disabled for now.
+
+Higgs Audio v3 integration:
+- use ComfyUI workflows invoked by API
+- create a dedicated Higgs render workflow template
+- app fills workflow variables dynamically
+- support reference-audio based cloning when reference sample is available
+- support expressive inline tags generated by the LLM
+- support retry logic
+- save raw output WAVs
+- save per-line metadata JSON
+
+Tagging policy:
+The LLM should produce expressive delivery metadata, not raw opaque prompt text.
+The app should convert delivery metadata into the exact Higgs tagging syntax centrally.
+This keeps prompts clean and adjustable.
+Implement a TagBuilder that maps:
+- emotion
+- style
+- prosody
+- nonverbal markers
+to final Higgs-formatted text.
+
+Stable Audio 3 integration:
+Use ComfyUI workflows through API.
+Create separate workflow templates for:
+1. SFX
+2. Music
+3. Ambience loops if needed
+
+Rules:
+- generate SFX and music with no vocals
+- short atmospheric music only
+- music should typically be 3 to 10 seconds for chapter transitions or scene transitions
+- ambience can be longer loops if necessary
+- default behavior should avoid excessive music under dialogue
+- use Stable Audio 3 for both SFX and music in V1
+
+SFX categories:
+- doors
+- footsteps
+- rain
+- thunder
+- wind
+- cloth movement
+- crowd murmur
+- forest ambience
+- room tone
+- creaks
+- glass
+- paper
+- fire
+- water
+Add more categories as generic tags.
+
+Image cover generation requirements:
+Optional feature, but implement in V1.
+
+Goal:
+Generate one consistent chapter cover per chapter.
+All covers must look like part of one coherent series.
+
+Backends:
+- Z-Image Turbo
+- Ideogram 4
+Use whichever is configured and available in ComfyUI.
+
+Cover consistency strategy:
+1. Build a "Series Style Bible" from the book and project settings.
+2. Generate one master style anchor cover.
+3. For each chapter, generate a chapter cover using:
+   - the global style bible
+   - the master anchor cover as visual reference
+   - chapter-specific mood and motifs
+4. Keep:
+   - same aspect ratio
+   - same palette family
+   - same illustration/rendering style
+   - same composition language
+   - same title placement logic if text overlay is enabled
+5. Generate without spoilers by default.
+   Use mood and abstract motifs unless the user explicitly enables scene-specific cover detail.
+
+Cover generation settings:
+- art style preset
+- color palette preset
+- typography enabled yes/no
+- chapter number text yes/no
+- include project title yes/no
+- spoiler-safe imagery yes/no
+- aspect ratio presets such as 2:3 and 1:1
+- backend selector
+
+Implement a "Style Bible" object with fields like:
+- genre
+- visual tone
+- palette
+- texture style
+- lighting style
+- composition rules
+- recurring motifs
+- forbidden elements
+- text treatment
+
+Audio mixing requirements:
+Do not use ComfyUI for mixing.
+Build a proper Python mixing pipeline using ffmpeg and Python audio libraries.
+
+Mixing pipeline:
+- one spoken line = one WAV
+- one SFX cue = one WAV
+- one music cue = one WAV
+- combine line-level clips into scene timeline
+- add pauses
+- place SFX relative to lines
+- place music at low level with ducking
+- add ambience beds where needed
+- normalize spoken line levels before mixing
+- master each chapter
+- export final audiobook
+
+Recommended targets:
+- chapter WAV export: lossless
+- MP3 export for convenience
+- M4B export with chapter markers
+- loudness target configurable, reasonable default around audiobook-friendly listening
+- prevent clipping
+- optional mono or stereo export preset
+
+Caching and determinism:
+This app will process long books, so caching is essential.
+
+Cache by content hash.
+If a line, SFX prompt, music prompt, or cover prompt is unchanged, reuse previous artifact.
+Store hashes for:
+- cleaned text segments
+- LLM outputs
+- Higgs render inputs
+- Stable Audio inputs
+- image cover prompts
+- final scene timelines
+This allows:
+- partial rerender
+- retry failed nodes
+- crash recovery
+- efficient edits
+
+Project structure on disk:
+Each project should have a dedicated folder structure like:
+project_root/
+  project.db
+  source/
+  cleaned/
+  analysis/
+  registry/
+  voices/
+  renders/
+    tts/
+    sfx/
+    music/
+    covers/
+  mixes/
+    scenes/
+    chapters/
+    final/
+  qc/
+  logs/
+  exports/
+  workflows/
+
+Suggested internal package structure:
+app/
+  main.py
+  ui/
+  core/
+  db/
+  models/
+  services/
+    pdf_service.py
+    text_cleanup_service.py
+    ollama_service.py
+    comfy_service.py
+    character_service.py
+    voice_service.py
+    higgs_service.py
+    stable_audio_service.py
+    cover_service.py
+    mixer_service.py
+    qc_service.py
+    export_service.py
+    cache_service.py
+    workflow_service.py
+  workers/
+  schemas/
+  utils/
+
+Database design:
+Use SQLite with migrations.
+Main tables:
+- projects
+- chapters
+- scenes
+- lines
+- characters
+- character_aliases
+- voices
+- voice_assignments
+- jobs
+- job_logs
+- artifacts
+- settings
+- covers
+- exports
+- qc_results
+
+Job system requirements:
+Implement a robust local job queue.
+Each job should have:
+- id
+- type
+- project_id
+- target_id
+- status
+- created_at
+- started_at
+- finished_at
+- retry_count
+- log
+- error_message
+- dependency_ids
+- priority
+Support:
+- pause
+- resume
+- cancel
+- retry
+- retry all failed
+- run sequentially to avoid VRAM overload
+Default strategy:
+Run heavy jobs sequentially, not in parallel, because target hardware is a 24 GB GPU.
+
+Resource scheduling requirements:
+The app must avoid trying to run gemma4:26b, Higgs, Stable Audio 3, and image generation at the same time.
+Create a central scheduler that runs stages in a memory-safe order.
+
+Default render order:
+1. analyze with gemma4:26b
+2. release LLM
+3. render TTS batch
+4. render SFX/music batch
+5. render covers
+6. mix chapter
+7. move to next chapter
+
+Spoiler-safe mode details:
+Enabled by default.
+Rules:
+- no visible chapter summaries
+- no visible extracted scenes
+- no visible chapter text
+- no visible generated prompts unless advanced reveal is clicked
+- logs should be technical, not narrative
+Good log examples:
+- "Chapter 4 analyzed"
+- "12 dialogue lines rendered"
+- "3 SFX cues generated"
+Bad log examples:
+- anything that exposes story events
+
+QC requirements:
+Implement automated QC checks:
+- missing renders
+- zero-length files
+- suspiciously short files
+- clipping detection
+- loudness outliers
+- missing voice assignment
+- failed LLM schema validation
+- optional ASR text similarity check using faster-whisper for spoken lines
+Provide a QC dashboard and batch repair actions.
+
+Error handling requirements:
+- all backend calls wrapped with retries and timeouts
+- clear user-facing errors
+- persistent logs
+- never lose project state
+- resume from last good checkpoint
+- for failed chapter jobs, allow rerender only that chapter
+
+ComfyUI workflow handling:
+Do not hardcode huge workflow JSON blobs inside business logic.
+Store workflow templates in a workflows/ directory.
+Use placeholder substitution for:
+- text
+- reference audio path
+- duration
+- output path
+- image prompt
+- reference image path
+Implement a ComfyWorkflowManager.
+
+Settings and diagnostics requirements:
+- detect Ollama availability
+- detect ComfyUI availability
+- detect ffmpeg
+- test one-click sample run for:
+  - Higgs speech
+  - Stable Audio SFX
+  - Stable Audio music
+  - chapter cover generation
+- show clear status badges
+
+Export features:
+- per-chapter WAV
+- per-chapter MP3
+- full book MP3
+- full book M4B with chapter markers
+- export chapter covers
+- export project metadata JSON
+- optionally export subtitles/transcript text for produced audio
+
+Prompt and schema management:
+Keep prompts in separate files, not embedded everywhere.
+Use clear versioning.
+Prompt groups:
+- structure_scan_prompt.txt
+- character_registry_prompt.txt
+- scene_planning_prompt.txt
+- rendering_metadata_prompt.txt
+- cover_style_bible_prompt.txt
+Use strict JSON schema validators for each stage.
+
+Security and privacy:
+- local-only by default
+- no telemetry
+- no cloud upload
+- clear handling of user files
+- allow deleting all generated caches from UI
+
+Copyright-related UX:
+Since users may process books they own, include a neutral disclaimer in the UI:
+- user is responsible for ensuring they have the right to process and generate derivative audio from the source book
+Do not block the feature, just display the notice.
+
+Implementation phases:
+Phase 1:
+- project system
+- PDF import
+- text cleanup
+- chapter detection
+- Ollama integration
+- character registry
+- voice library
+- Higgs TTS integration
+- Stable Audio SFX/music integration
+- chapter mixing
+- chapter export
+
+Phase 2:
+- chapter cover generation
+- style bible
+- master cover anchor
+- spoiler-safe detail reveal system
+- M4B export
+- QC dashboard
+
+Phase 3:
+- advanced rerender controls
+- ASR verification
+- richer voice sample management
+- plugin interfaces for future voice design providers
+
+Acceptance criteria:
+The finished app should:
+1. create a new project from a PDF
+2. detect chapters and build a character registry
+3. let the user assign voices to narrator and characters
+4. generate expressive German TTS with Higgs Audio v3
+5. generate SFX and short music with Stable Audio 3
+6. mix everything into per-chapter audio
+7. optionally generate coherent chapter covers
+8. export audio and images
+9. survive restarts and resume work
+10. keep the UI responsive during long jobs
+11. be visually polished and pleasant to use
+12. avoid spoilers by default
+
+Code quality requirements:
+- type hints everywhere
+- clean modular architecture
+- docstrings for public services
+- unit tests for core text and schema logic
+- integration test stubs for Ollama and ComfyUI clients
+- logging throughout
+- no giant god classes
+- no duplicated workflow code
+
+==================================================================
+APPENDIX A: ENGINE PROMPTING CONTRACTS (authoritative)
+==================================================================
+
+Local engine reality (all confirmed running locally on this machine):
+- LLM: huihui_ai/gemma-4-abliterated:26b in Ollama
+- TTS: Higgs Audio v3 (boson-ai/higgs-audio), driven via the
+  TTS-Audio-Suite custom nodes in ComfyUI
+  (https://github.com/diodiogod/TTS-Audio-Suite)
+- SFX/music: Stable Audio 3 in ComfyUI
+- Covers: Ideogram 4 (and Z-Image Turbo) in ComfyUI
+
+Core design rule:
+The LLM produces ONE structured, enum-locked output per line/cue.
+Dedicated builders translate that single structure into:
+  (a) Higgs control-token text   -> TagBuilder
+  (b) Ideogram JSON caption      -> CoverCaptionBuilder
+The LLM never emits engine-specific syntax. The builders are the
+only code that knows engine syntax. Validate LLM output against the
+enums below BEFORE it reaches a builder.
+
+------------------------------------------------------------------
+A.1  HIGGS AUDIO v3 — control tokens (verified from model card
+     bosonai/higgs-audio-v3-tts-4b)
+------------------------------------------------------------------
+Tag syntax: <|category:value|>  (insertable mid-utterance)
+Placement: delivery tokens (emotion, style, prosody speed/pitch)
+go at the START of the turn and shape the whole turn. Pauses, pitch
+shifts, and sfx tokens go INLINE where they occur. Each sfx token
+must be immediately followed by matching onomatopoeia.
+
+Example:
+<|emotion:fear|><|style:whispering|><|prosody:speed_slow|>Was war das?<|prosody:pause|>
+
+ALLOWED ENUMS — the LLM schema MUST constrain to exactly these.
+TagBuilder drops or maps anything off-list; validation rejects
+unknown values rather than passing them through.
+
+emotion (21):
+  elation, amusement, enthusiasm, determination, pride,
+  contentment, affection, relief, contemplation, confusion,
+  surprise, awe, longing, arousal, anger, fear, disgust,
+  bitterness, sadness, shame, helplessness
+
+style (3):
+  singing, shouting, whispering
+
+prosody (10):
+  speed_very_slow, speed_slow, speed_fast, speed_very_fast,
+  pitch_low, pitch_high, pause, long_pause,
+  expressive_high, expressive_low
+
+sfx (9) — each REQUIRES onomatopoeia immediately after:
+  cough, laughter, crying, screaming, burping, humming,
+  sigh, sniff, sneeze
+  e.g. <|sfx:laughter|>Haha   <|sfx:sigh|>Uh
+
+Note: 'arousal' emotion exists in the model but should be filtered
+out of the LLM's allowed set for this product unless explicitly
+relevant; default-exclude it in the schema enum.
+
+Reference-audio cloning:
+- format: references: [{ audio_path, text }]
+- the reference TRANSCRIPT materially improves fidelity and is
+  REQUIRED in practice. The voice library (screen 6) MUST store a
+  ref_text alongside every sample. Add column voices.ref_text.
+- multi-speaker = supply one reference per speaker.
+
+TagBuilder contract:
+  build_higgs_text(delivery, text) -> str
+  - prepend turn-level tokens in fixed order:
+    emotion, style, prosody(speed), prosody(pitch), expressive
+  - inline-insert pauses and sfx at their marked offsets
+  - assert every token is in the allowed enum (defensive)
+
+Map your existing schema (PLAN line ~290) delivery fields:
+  emotion          -> <|emotion:VALUE|>     (enum above)
+  style            -> <|style:VALUE|>        (enum above)
+  prosody[]        -> <|prosody:VALUE|>      (enum above)
+  nonverbal[]      -> <|sfx:VALUE|>onomatopoeia
+  pre/post_pause_ms-> handled by MIXER, not tokens (keep ms in mix
+                      timeline; only use <|prosody:pause|> for
+                      intra-line beats)
+
+------------------------------------------------------------------
+A.2  IDEOGRAM 4 — JSON caption prompting (cover consistency)
+------------------------------------------------------------------
+Ideogram 4 is trained EXCLUSIVELY on structured JSON captions that
+exhaustively describe the image. Plain-text prompts work but are
+strictly worse and drift between chapters -> inconsistent series.
+Therefore cover_service builds a JSON caption object, never a
+prose string. Magic Prompt MUST be OFF (it re-expands text per call
+via an LLM and breaks series consistency — we own the JSON).
+
+VERIFIED SCHEMA (from ideogram4 docs/prompting.md). Three top-level
+fields, STRICT key order (CaptionVerifier warns on violations):
+
+  high_level_description : string  (1-2 sentence summary of image)
+  style_description      : object  (exactly one of photo|art_style)
+      key order (non-photo): aesthetics, lighting, medium,
+                             art_style, color_palette
+      key order (photo):     aesthetics, lighting, photo, medium,
+                             color_palette
+      color_palette : list of up to 16 UPPERCASE #RRGGBB hex
+  compositional_deconstruction : object (REQUIRED)
+      background : string (environment)
+      elements   : list of element objects
+          obj  element key order: type, bbox, desc, color_palette
+          text element key order: type, bbox, text, desc, color_palette
+          type  : "obj" | "text"
+          bbox  : [y_min, x_min, y_max, x_max], 0-1000 normalized
+          color_palette : up to 5 hex per element
+
+Serialize with json.dumps(..., separators=(",",":"),
+ensure_ascii=False). Use art_style (not photo) for illustrated
+covers. There is no "aspect_ratio" field in the caption — aspect
+ratio is a generation param (multiple-of-16 dims), set on the
+ComfyUI node, not in the JSON.
+
+SERIES CONSISTENCY MECHANISM:
+Hold these fields IDENTICAL across every chapter cover, derived
+once from the Style Bible. Vary ONLY the per-chapter motif.
+
+  FIXED (from Style Bible, all chapters):
+    style_description.*    (aesthetics, lighting, medium, art_style)
+    style_description.color_palette   e.g.
+        ["#1A2238","#9DAAF2","#F4DB7D"]   (uppercase #RRGGBB)
+    compositional_deconstruction.background   (same setting feel)
+    the title/number TEXT element's bbox + style (if typography on)
+
+  VARIES (per chapter, spoiler-safe abstract motif only):
+    high_level_description           (abstract, no plot)
+    the obj elements' desc           (abstract motif, no characters
+                                      unless scene-detail mode is on)
+
+CoverCaptionBuilder contract:
+  build_caption(style_bible, chapter_motif, opts) -> dict
+  emitting (key order matters):
+    {
+      "high_level_description": "<abstract chapter motif>",   # VARIES
+      "style_description": {                                   # FIXED
+        "aesthetics": "muted gouache, grainy paper texture",
+        "lighting":   "soft diffuse light",
+        "medium":     "illustration",
+        "art_style":  "painterly storybook",
+        "color_palette": ["#1A2238","#9DAAF2","#F4DB7D"]
+      },
+      "compositional_deconstruction": {
+        "background": "<fixed setting feel from bible>",       # FIXED
+        "elements": [
+          {"type":"obj","bbox":[300,200,800,800],
+           "desc":"<abstract chapter motif object>"},          # VARIES
+          {"type":"text","bbox":[850,100,950,900],
+           "text":"Kapitel 3","desc":"title text, serif"}       # FIXED pos
+        ]
+      }
+    }
+The master anchor cover uses the same builder with a series-level
+motif; you MAY also pass it as an image reference, but the JSON
+(fixed style_description + background) is the primary anchor.
+
+Cache key for a cover = hash(serialized caption JSON + backend +
+workflow template version). Changing the bible invalidates all
+covers. Run the doc's CaptionVerifier on every built caption.
+
+------------------------------------------------------------------
+A.3  SPOILER-SAFE CHARACTER COLLECTION (map-reduce over whole book)
+------------------------------------------------------------------
+The LLM runs over the WHOLE PDF, chunked, and must collect every
+character with a short description and a VOICE description while
+leaking minimal plot. Spoiler-safety is enforced at the PROMPT
+CONTRACT level (output is constructed spoiler-light at the source),
+not only by hiding things in the UI.
+
+MAP pass (per chunk) — structure_scan + character mentions:
+  For each character mention in the chunk, emit ONLY:
+    name_surface (as written), gender_guess(enum), age_band(enum),
+    observable vocal/physical traits, mention_count_in_chunk
+  HARD PROMPT RULES (forbidden):
+    - no plot events, deaths, twists, betrayals, outcomes
+    - no relationship reveals ("turns out to be the father")
+    - no "later becomes / eventually / secretly is"
+    - no motivated voice notes ("menacing because she is the
+      killer") — vocal attributes only
+  enums:
+    gender_guess: male, female, ambiguous, unknown
+    age_band:     child, teen, young_adult, adult, elderly, unknown
+    role_importance (assigned in REDUCE, see below)
+
+REDUCE pass — character registry build (PLAN Pass 2):
+  - merge aliases/surface forms -> canonical character_id
+  - conflicts (age differs across chunks): keep most frequent,
+    flag for manual review
+  - role_importance derived from TOTAL mention_count, NOT from LLM
+    plot judgement:
+        narrator (special-cased) | main | secondary | minor | crowd
+    (use frequency thresholds; this avoids asking the model to
+     reason about plot importance at all)
+  - voice_hint = vocal attributes only: timbre, pitch, pace,
+    accent, roughness, age feel. NEVER arc/role/spoiler.
+
+Two-tier spoiler model:
+  - the LLM may READ everything (it must) but its REGISTRY OUTPUT
+    is built spoiler-light per the rules above
+  - anything the reduce pass flags as possibly-plot goes into
+    characters.notes_hidden_by_default; the rest is safe to show
+  - UI hiding (spoiler-safe mode) is then a SECOND layer, not the
+    only defense
+
+Prompt files to add/version for this:
+  structure_scan_prompt.txt        (map pass, includes the
+                                    forbidden-content firewall block)
+  character_registry_prompt.txt    (reduce/merge pass)
+Reuse the firewall block verbatim in every prompt that touches
+character text.
+
+------------------------------------------------------------------
+A.4  SINGLE-SOURCE SCHEMA + VALIDATION SEAM
+------------------------------------------------------------------
+- Use pydantic v2 models as the ONE source of truth for: LLM output
+  validation, DB row shape, and cache-key construction.
+- Pass-4 spoken-line schema embeds the Higgs enums (A.1) as Python
+  Enums so invalid emotion/style/prosody is rejected at parse time,
+  with a corrective-retry prompt (PLAN line ~216 flow).
+- Cache-key inputs MUST be complete or stale artifacts get served:
+    TTS line   = hash(text, voice_id, ref_text, delivery_tokens,
+                      higgs_workflow_version, engine_version)
+    cover      = hash(caption_json, backend, cover_workflow_version)
+    sfx/music  = hash(prompt, duration, sa_workflow_version)
+  Bump *_workflow_version whenever a ComfyUI template changes so
+  edits invalidate correctly.
+
+==================================================================
+APPENDIX B: STABLE AUDIO 3 — SFX / AMBIENCE / MUSIC GENERATION
+==================================================================
+
+The plan currently treats "SFX" as one thing. It is THREE distinct
+asset classes with different generation, length, and placement
+rules. Model them separately in schema, cache, and mixer.
+
+------------------------------------------------------------------
+B.1  THREE AUDIO ASSET CLASSES
+------------------------------------------------------------------
+1) ONE-SHOT SFX  (transient events)
+   examples: door, glass break, footstep, paper, creak, thunder hit
+   - short (~0.5–5 s), generated at natural length
+   - placed at an ABSOLUTE timestamp relative to a line
+   - NOT looped. NOT ducked (they are foreground events)
+   - one cue = one WAV, trimmed to the transient
+
+2) BACKGROUND SFX / AMBIENCE BED  (continuous texture)
+   examples: harbour, rain, wind, forest, crowd murmur, room tone,
+             fire, water, market, ship deck
+   - must fill an ARBITRARY scene duration (could be 20 s or 6 min)
+   - generate ~180 s (Stable Audio 3 max single-gen length — verify
+     against your ComfyUI workflow; if capped lower, generate at the
+     cap), then convert to a SEAMLESS LOOP (B.2) and tile to fill
+   - sits LOW in the mix, DUCKED under dialogue (sidechain)
+   - one ambience type = one looped WAV, reused across the scene
+
+3) MUSIC CUE  (atmospheric transition)
+   examples: chapter intro, scene transition sting, tension pad
+   - typically 3–10 s, one-shot, NOT looped (unless an evolving pad
+     explicitly intended as a bed — then treat like class 2)
+   - placed at scene/chapter boundaries, low level, ducked
+
+LLM Pass-4 cue schema MUST tag which class a cue is:
+  cue_class: one_shot_sfx | ambience_bed | music_cue
+The mixer branches on cue_class. Ducking required = true for
+ambience_bed and music_cue, false for one_shot_sfx (default).
+
+------------------------------------------------------------------
+B.2  SEAMLESS LOOP PIPELINE (for ambience_bed)
+------------------------------------------------------------------
+Goal: turn a ~180 s generated clip into a loop with no audible
+seam at the wrap point, then tile it to the scene length.
+
+Steps (Python, in mixer_service or a dedicated loop_util):
+  1. Generate ambience at full length (~180 s), 44.1 kHz, no vocals.
+  2. Trim head/tail silence and any DC offset (high-pass ~20 Hz).
+  3. SEAMLESS-LOOP via equal-power crossfade fold:
+       - choose crossfade length X (e.g. 2–4 s)
+       - take the last X seconds (tail) and the first X seconds
+         (head); crossfade tail INTO head using an equal-power
+         (constant-power, sin/cos) curve, NOT linear — linear
+         crossfades dip in perceived loudness at the seam
+       - the body between the folded regions is the loop core;
+         result length = original_len - X
+       - the join is now continuous: end flows into start
+  4. Validate: RMS continuity across the wrap, no click (check for
+     sample discontinuity / large delta at the boundary).
+  5. Tile/repeat the loop to >= scene_duration, then HARD-CUT to
+     exact scene length and apply a short fade-out (and fade-in)
+     so the bed enters/exits cleanly.
+
+PROMPTING RULES for loopable ambience (critical):
+  - prompt for CONTINUOUS, STEADY texture: "constant", "steady",
+    "even", "no sudden changes", "seamless ambient bed"
+  - AVOID salient one-time transients inside the bed prompt. A
+    single distinct seagull cry or door slam baked into a 180 s
+    harbour bed becomes obviously PERIODIC once looped (you hear
+    it every loop period). Keep distinct events OUT of the bed —
+    generate them as separate class-1 one-shots layered on top at
+    irregular timestamps.
+  - explicitly state "no vocals, no music, no speech"
+  - good harbour bed prompt: "steady harbour ambience, gentle water
+    lapping, distant indistinct crowd murmur, faint rigging creak,
+    even continuous texture, no distinct events, no vocals, field
+    recording"
+  - the distinct seagull/bell/horn -> separate one_shot_sfx cues
+
+Cache key for an ambience loop:
+  hash(prompt, target_gen_len, crossfade_len, sa_workflow_version)
+The looped artifact is cached; the per-scene tiled/cut version is
+derived cheaply at mix time and need not be cached.
+
+------------------------------------------------------------------
+B.3  MIXER CONSEQUENCES
+------------------------------------------------------------------
+- Scene timeline carries: spoken lines (placed), one_shot_sfx
+  (placed at timestamps), ambience_bed (looped, spans the scene,
+  ducked), music_cue (placed at boundaries, ducked).
+- Layering order: ambience bed (bottom) -> one-shot SFX -> music
+  -> dialogue (top, sidechain key for ducking the bed + music).
+- Default: keep music sparse under dialogue (PLAN line ~376);
+  ambience bed may run continuously but stays well below speech.
+- Stable Audio 3 SFX/music are no-vocals only (PLAN line ~371) —
+  enforce in the prompt builder, not just by convention.
+
+Add to workflows/ separate Stable Audio templates already planned
+(SFX, music, ambience). Ambience template generates the long bed;
+the seamless-loop step is APP-side Python (ffmpeg/soundfile), NOT
+ComfyUI.
+
+==================================================================
+
+Now implement the application in a production-minded way.
+Start by scaffolding the project structure, SQLite schema, settings system, service interfaces, and PySide6 shell UI.
+Then implement the import pipeline, Ollama integration, character registry, and job queue.
+After that implement Higgs Audio v3 and Stable Audio 3 ComfyUI workflow execution.
+Then implement the mixer and export.
+Then implement chapter cover generation with a style bible and consistent-series cover logic.
+Make reasonable choices and proceed without asking unnecessary questions.

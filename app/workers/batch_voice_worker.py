@@ -71,14 +71,19 @@ class BatchVoiceWorker(QThread):
         )
         project_service.save_characters(proj, self._chars)
 
-        # --- Phase B: Higgs emotion-varied Hörprobe for all -----------------
+        # --- Phase B: Higgs Hörprobe (the audiobook clone reference) ---------
+        from pathlib import Path
         engine = registry.get_engine()
         text = preview.build_emotional_preview()
-        with_voice = [c for c in targets if c.voice_sample]
+        # Only clone characters whose designed sample actually exists — a failed
+        # design would otherwise fall back to the default voice (wrong gender).
+        with_voice = [c for c in targets
+                      if c.voice_sample and Path(c.voice_sample).exists()]
 
         def hoerprobe(ch: Character) -> None:
             v = Voice(voice_id=ch.character_id, name=ch.display_name,
-                      ref_audio_path=ch.voice_sample)
+                      ref_audio_path=ch.voice_sample,
+                      gender=ch.gender_guess.value, age=ch.age_band.value)
             engine.synthesize(TTSRequest(
                 text=text, voice=v, delivery=None,
                 out_path=proj.preview_path(ch.character_id),

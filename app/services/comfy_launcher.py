@@ -121,67 +121,63 @@ import atexit  # noqa: E402
 atexit.register(stop)
 
 
-def ensure_stage(stage_name: str) -> None:
-    """Guarantee ComfyUI is up for `stage_name`, restarting if the node set differs.
+# One persistent ComfyUI serves every stage: it's launched once (with
+# tts_audio_suite whitelisted) and stays up for the app's lifetime, so there's
+# no per-stage relaunch/boot cost. The whitelist covers TTS (tts_audio_suite)
+# while Stable-Audio and Z-Image are core nodes.
+_UNIVERSAL_STAGE = "tts"
 
-    No-op when manage_process is False (assumes the user launched the right
-    workflow_launchers/*.bat) beyond a health check.
-    """
+
+def start(wait: bool = False) -> None:
+    """Launch the single persistent ComfyUI (call once at app startup). With
+    wait=False it returns immediately; the first render waits for health."""
+    _ensure_single(wait=wait)
+
+
+def _ensure_single(wait: bool = True) -> None:
     global _process, _current_stage
     cfg = CONFIG.comfy
-    if stage_name not in cfg.stages:
-        raise LauncherError(f"Unknown ComfyUI stage: {stage_name}")
-
     if not cfg.manage_process:
-        if not is_running():
-            raise LauncherError(
-                f"ComfyUI is not running. Start workflow_launchers for the "
-                f"'{stage_name}' stage, or enable manage_process."
-            )
+        if wait and not is_running():
+            raise LauncherError("ComfyUI is not running and manage_process is off.")
         return
-
-    if _current_stage == stage_name and is_running():
+    if _process is not None and _process.poll() is None:        # already launched
+        if wait and not is_running():
+            _wait_until_healthy(_url(_base_port()), _process)
         return
+    _kill_on_port(_base_port())
+    logger.info("Launching persistent ComfyUI (whitelist=%s)", _UNIVERSAL_STAGE)
+    _process = _spawn(_UNIVERSAL_STAGE, _base_port())
+    _current_stage = _UNIVERSAL_STAGE
+    if wait:
+        _wait_until_healthy(_url(_base_port()), _process)
 
-    stop()
-    if is_running():
-        _kill_on_port(_base_port())
 
-    _process = _spawn(stage_name, _base_port())
-    _current_stage = stage_name
-    _wait_until_healthy(_url(_base_port()), _process)
+def ensure_stage(stage_name: str) -> None:
+    """Ensure the single persistent ComfyUI is up and healthy. The stage name is
+    informational now — one instance serves them all (no relaunch/switch)."""
+    _ensure_single(wait=True)
 
 
 def ensure_pool(stage_name: str, n: int | None = None) -> list[str]:
-    """Launch `n` lean ComfyUI instances for a stage (ports base, base+1, …) and
-    return their base URLs. Use with comfy_service.set_target() per worker thread
-    to render in parallel. Falls back to the single managed instance when n<=1 or
-    process management is off."""
-    global _process, _current_stage, _pool, _pool_urls
-    cfg = CONFIG.comfy
-    n = n or cfg.parallel
-    if n <= 1 or not cfg.manage_process:
-        ensure_stage(stage_name)
-        return [_url(_base_port())]
+    """One persistent instance now serves everything, so the 'pool' is just it.
+    Returns a single-element URL list (batches render sequentially on it)."""
+    _ensure_single(wait=True)
+    return [_url(_base_port())]
 
-    if _current_stage == stage_name and len(_pool_urls) == n \
-            and all(comfy_service.health_check(u) for u in _pool_urls):
-        return list(_pool_urls)
 
-    stop()
-    base = _base_port()
-    for i in range(n):
-        _kill_on_port(base + i)
-    procs, urls = [], []
-    for i in range(n):
-        port = base + i
-        procs.append(_spawn(stage_name, port))
-        urls.append(_url(port))
-    for proc, url in zip(procs, urls):
-        _wait_until_healthy(url, proc)
-    _pool, _pool_urls, _current_stage = procs, urls, stage_name
-    logger.info("ComfyUI pool ready: %s", urls)
-    return list(urls)
+def free_vram() -> None:
+    """Ask ComfyUI to unload its models and free VRAM — call before a VRAM-heavy
+    Ollama step so the persistent instance doesn't starve it."""
+    if not CONFIG.comfy.manage_process or _process is None:
+        return
+    try:
+        with httpx.Client(timeout=15.0) as client:
+            client.post(_url(_base_port()) + "/free",
+                        json={"unload_models": True, "free_memory": True})
+        logger.info("Asked ComfyUI to free VRAM")
+    except Exception:  # noqa: BLE001
+        logger.debug("ComfyUI /free failed", exc_info=True)
 
 
 def _kill_on_port(port: int) -> None:

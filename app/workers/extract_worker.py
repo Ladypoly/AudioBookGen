@@ -46,6 +46,8 @@ class ExtractWorker(QThread):
 
     def run(self) -> None:  # noqa: D102 (QThread entry point)
         try:
+            from app.services import comfy_launcher
+            comfy_launcher.free_vram()      # let the LLM have the VRAM for extraction
             self.progress.emit(0, 0, "Reading PDF…")
             project = project_service.open_project(self._pdf_path)
             project_service.save_source(project, self._pdf_path)

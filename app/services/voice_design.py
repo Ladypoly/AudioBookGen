@@ -97,32 +97,8 @@ def design_voice(char: Character, out_path: Path, on_step=None) -> Path:
         "{filename_prefix}": f"b2ad/{out_path.stem}",
     }
     logger.info("Designing voice for %s: %s", char.display_name, description)
-    # Higgs clones faithfully only when the timbre sits in its range; a too-deep
-    # male design (< ~118 Hz) makes the later clone drift up (even to a female
-    # voice). Qwen varies per run (temperature), so re-roll a too-deep one.
-    male = char.gender_guess.value == "male"
-    for attempt in range(3):
-        comfy_service.run_workflow(
-            CONFIG.comfy.voicedesign_workflow, replacements, out_path, on_step=on_step,
-            timeout=CONFIG.comfy.tts_timeout_s,
-        )
-        if not male:
-            break
-        med = _median_pitch(out_path)
-        if med is None or med >= 118.0:
-            break
-        logger.info("Voice design too deep for %s (%.0f Hz) — re-rolling (%d/3)",
-                    char.display_name, med, attempt + 1)
+    comfy_service.run_workflow(
+        CONFIG.comfy.voicedesign_workflow, replacements, out_path, on_step=on_step,
+        timeout=CONFIG.comfy.tts_timeout_s,
+    )
     return out_path
-
-
-def _median_pitch(path: Path) -> float | None:
-    try:
-        import librosa
-        import numpy as np
-        y, sr = librosa.load(str(path), sr=16000, mono=True, duration=10)
-        f0, _, _ = librosa.pyin(y, fmin=55, fmax=400, sr=sr)
-        f0 = f0[~np.isnan(f0)]
-        return float(np.median(f0)) if f0.size else None
-    except Exception:  # noqa: BLE001
-        return None

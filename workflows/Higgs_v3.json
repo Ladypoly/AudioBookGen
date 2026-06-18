@@ -24,7 +24,7 @@
       "max_chars_per_chunk": 400,
       "chunk_combination_method": "auto",
       "silence_between_chunks_ms": 100,
-      "enable_audio_cache": false,
+      "enable_audio_cache": true,
       "batch_size": 0,
       "TTS_engine": [
         "12",

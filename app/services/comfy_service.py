@@ -52,6 +52,17 @@ def health_check(base_url: str | None = None) -> bool:
         return False
 
 
+def _dump_graph(template_name: str, graph: dict) -> None:
+    """Save the exact filled workflow we POST, so it can be loaded straight into
+    ComfyUI (API format) to compare against a hand-run."""
+    try:
+        out = CONFIG.projects_root.parent / "logs" / f"last_{Path(template_name).stem}.json"
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_text(json.dumps(graph, indent=2, ensure_ascii=False), encoding="utf-8")
+    except Exception:  # noqa: BLE001
+        pass
+
+
 def _load_template(name: str) -> dict:
     path: Path = CONFIG.workflows_dir / name
     if not path.exists():
@@ -114,6 +125,7 @@ def run_workflow(
     base = _target()
     client_id = uuid.uuid4().hex
     graph = _fill(_load_template(template_name), replacements)
+    _dump_graph(template_name, graph)   # save exactly what we send, for debugging
 
     with httpx.Client(timeout=timeout) as client:
         resp = client.post(

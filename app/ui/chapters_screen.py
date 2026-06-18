@@ -164,19 +164,41 @@ class ChapterRow(QFrame):
             self.status.setStyleSheet("")
             self.play_btn.setEnabled(False)
 
+    _REDO = {
+        "full": dict(redo_voices=True, redo_ambience=True, redo_sfx=True),
+        "ambience": dict(redo_ambience=True),
+        "sfx": dict(redo_sfx=True),
+        "voices": dict(redo_voices=True),
+        "mix": dict(),
+    }
+
+    def _ask_rerender_mode(self):
+        box = QMessageBox(self)
+        box.setWindowTitle("Re-render chapter")
+        box.setText(f"'{self._info['number']}. {self._info['title']}' is already "
+                    "rendered.\nWhat do you want to redo?")
+        order = [("full", "Full re-render (voices + SFX + ambience)"),
+                 ("ambience", "Ambience only"),
+                 ("sfx", "SFX only"),
+                 ("voices", "Voices only"),
+                 ("mix", "Mix only (fast)")]
+        btns = {key: box.addButton(label, QMessageBox.ButtonRole.AcceptRole)
+                for key, label in order}
+        box.addButton("Cancel", QMessageBox.ButtonRole.RejectRole)
+        box.exec()
+        clicked = box.clickedButton()
+        return next((k for k, b in btns.items() if b is clicked), None)
+
     def _render(self) -> None:
         proj = project_service.active()
         if proj is None:
             return
-        if self._rendered_file() is not None:        # confirm overwrite
-            r = QMessageBox.question(
-                self, "Re-render chapter",
-                f"'{self._info['number']}. {self._info['title']}' is already rendered.\n"
-                "Render again and overwrite?",
-                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-                QMessageBox.StandardButton.No)
-            if r != QMessageBox.StandardButton.Yes:
+        flags: dict = {}
+        if self._rendered_file() is not None:
+            mode = self._ask_rerender_mode()
+            if mode is None:                 # cancel
                 return
+            flags = self._REDO[mode]
         chapter = chapter_service.load_chapter(proj, self._info["chapter_id"])
         if chapter is None:
             self.status.setText("chapter data missing")
@@ -185,11 +207,8 @@ class ChapterRow(QFrame):
         self.play_btn.setEnabled(False)
         self.bar.setVisible(True)
         self.bar.setRange(0, 0)
-        # Complete the chapter: reuse existing line clips + scene audio, render
-        # only what's missing, then re-mix. (Fast re-mix when nothing changed —
-        # e.g. after tweaking ambience/pause/master settings.)
         self._worker = ChapterRenderWorker(
-            chapter, self._screen.characters, force=False, test=False, parent=self)
+            chapter, self._screen.characters, parent=self, **flags)
         self._worker.progress.connect(self._on_progress)
         self._worker.finished_ok.connect(self._on_done)
         self._worker.failed.connect(self._on_fail)

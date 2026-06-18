@@ -23,12 +23,17 @@ class ChapterRenderWorker(QThread):
 
     def __init__(self, chapter: Chapter, characters: list[Character],
                  force: bool = False, test: bool = False,
+                 redo_voices: bool = False, redo_ambience: bool = False,
+                 redo_sfx: bool = False,
                  parent: QObject | None = None) -> None:
         super().__init__(parent)
         self._chapter = chapter
         self._chars = characters
         self._force = force
         self._test = test
+        self._redo_voices = redo_voices
+        self._redo_ambience = redo_ambience
+        self._redo_sfx = redo_sfx
         self._cancelled = False
 
     def cancel(self) -> None:
@@ -47,20 +52,24 @@ class ChapterRenderWorker(QThread):
             line_planner.prepend_title(ch)      # narrator announces the title
             if self._test:  # only the first pages (narrator + a few dialogues)
                 ch.lines = line_planner.test_slice(ch.lines)
-            force = self._force or self._test   # tests always render fresh
+            # voices re-render when forced (test, full, or "voices only")
+            force = self._force or self._test or self._redo_voices
             proj0 = ps.active()
 
             # A chapter render is self-contained: generate its scene audio
-            # (ambience bed + discrete SFX) if missing, so it gets blended in.
+            # (ambience bed + discrete SFX) if missing OR explicitly re-requested.
             if proj0 is not None:
                 from app.core.config import CONFIG
                 sfx_planner.annotate(ch.lines)
+                if self._redo_ambience:   # force regen by clearing the old files
+                    proj0.ambience_path(ch.chapter_id).unlink(missing_ok=True)
+                    proj0.music_path(ch.chapter_id).unlink(missing_ok=True)
                 need_amb = (CONFIG.tts.ambience_enabled
                             and not proj0.ambience_path(ch.chapter_id).exists())
                 need_mus = (CONFIG.tts.music_enabled
                             and not proj0.music_path(ch.chapter_id).exists())
-                need_sfx = CONFIG.tts.sfx_enabled and any(
-                    not proj0.sfx_clip_path(c).exists() for c in sfx_planner.cues_for(ch))
+                need_sfx = CONFIG.tts.sfx_enabled and (self._redo_sfx or any(
+                    not proj0.sfx_clip_path(c).exists() for c in sfx_planner.cues_for(ch)))
                 if need_amb or need_mus or need_sfx:
                     self.progress.emit(0, 0, "Generating scene audio")
                     ollama_service.unload()
@@ -76,7 +85,7 @@ class ChapterRenderWorker(QThread):
                                                proj0.music_path(ch.chapter_id),
                                                kind="music")
                     if need_sfx:
-                        sfx_planner.generate_chapter_sfx(proj0, ch)
+                        sfx_planner.generate_chapter_sfx(proj0, ch, force=self._redo_sfx)
 
             # If every clip already exists and we're not forcing, this is a pure
             # re-assemble (e.g. tuning pauses) — skip the slow ComfyUI launch.

@@ -20,7 +20,7 @@
       "text": "{tts_text}",
       "narrator_voice": "none",
       "seed": "{seed}",
-      "enable_chunking": true,
+      "enable_chunking": false,
       "max_chars_per_chunk": 400,
       "chunk_combination_method": "auto",
       "silence_between_chunks_ms": 100,
@@ -43,7 +43,7 @@
   "14": {
     "inputs": {
       "audio": "{reference_audio}",
-      "audioUI": "/api/view?filename=RiccoRecordingDE_clean.wav&type=input&subfolder=&rand=0.8411098979961958"
+      "audioUI": "/api/view?filename=alan.mp3&type=input&subfolder=&rand=0.1298239780407583"
     },
     "class_type": "LoadAudio",
     "_meta": {
@@ -54,7 +54,7 @@
     "inputs": {
       "filename_prefix": "{filename_prefix}",
       "quality": "V0",
-      "audioUI": "/api/view?filename=ComfyUI_00190.mp3&type=output&subfolder=audio&rand=0.5412677302751772",
+      "audioUI": "/api/view?filename=ComfyUI_00201.mp3&type=output&subfolder=audio&rand=0.6566845851848312",
       "audio": [
         "13",
         0
@@ -63,6 +63,36 @@
     "class_type": "SaveAudioMP3",
     "_meta": {
       "title": "Save Audio (MP3)"
+    }
+  },
+  "17": {
+    "inputs": {
+      "string": "",
+      "regex_pattern": "",
+      "mode": "First Match",
+      "case_insensitive": true,
+      "multiline": false,
+      "dotall": false,
+      "group_index": 1
+    },
+    "class_type": "RegexExtract",
+    "_meta": {
+      "title": "Extract Text"
+    }
+  },
+  "20": {
+    "inputs": {
+      "string": "",
+      "regex_pattern": "",
+      "mode": "First Match",
+      "case_insensitive": true,
+      "multiline": false,
+      "dotall": false,
+      "group_index": 1
+    },
+    "class_type": "RegexExtract",
+    "_meta": {
+      "title": "Extract Text"
     }
   }
 }

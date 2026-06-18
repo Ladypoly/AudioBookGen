@@ -58,12 +58,6 @@ class HiggsTTSEngine:
 
     # --- helpers -------------------------------------------------------------
 
-    # Higgs can't clone an extremely deep voice — below ~this Hz it drifts up
-    # (even into a female voice). So if a reference is deeper, pitch it up to
-    # the target before cloning.
-    _PITCH_FLOOR_HZ = 105.0
-    _PITCH_TARGET_HZ = 115.0
-
     def _ensure_reference(self, voice):
         """Write a clone-ready reference into ComfyUI's input/ under a UNIQUE
         name and return (filename, path). The caller deletes the file after the
@@ -86,8 +80,10 @@ class HiggsTTSEngine:
         return ref_name, dst
 
     def _prepared_bytes(self, voice, src: Path):
-        """Reference decoded to PCM WAV (Higgs drifts on MP3 refs) and a too-deep
-        clip pitch-lifted — as raw bytes, cached per (voice, file)."""
+        """Reference decoded to PCM WAV (Higgs drifts on MP3 refs) — exactly as-is
+        otherwise (no pitch-shifting; it moves formants and degrades the voice).
+        Cached per (voice, file). A too-deep timbre is prevented upstream by the
+        voice-design re-roll, not patched here."""
         try:
             key = (voice.voice_id, str(src), src.stat().st_mtime)
         except OSError:
@@ -104,7 +100,6 @@ class HiggsTTSEngine:
             else:
                 from pydub import AudioSegment
                 AudioSegment.from_file(src).export(tmp, format="wav")
-            self._normalize_pitch(tmp, voice)
             data = tmp.read_bytes()
         except Exception:  # noqa: BLE001
             logger.exception("Reference prep failed: %s", src)
@@ -119,30 +114,3 @@ class HiggsTTSEngine:
             with _PREP_LOCK:
                 _PREP_CACHE[key] = data
         return data
-
-    def _normalize_pitch(self, dst: Path, voice) -> None:
-        """ONLY rescue a reference too deep for Higgs to clone (< ~105 Hz, where
-        it drifts up into a female voice). Everything else is left exactly as-is
-        — pitch-shifting also moves formants and degrades the voice, so we never
-        touch a reference Higgs can already clone faithfully."""
-        try:
-            import math
-
-            import librosa
-            import numpy as np
-            import soundfile as sf
-            y, sr = librosa.load(str(dst), sr=None, mono=True)
-            f0, _, _ = librosa.pyin(y, fmin=55, fmax=420, sr=sr)
-            f0 = f0[~np.isnan(f0)]
-            if f0.size == 0:
-                return
-            med = float(np.median(f0))
-            if not (0 < med < self._PITCH_FLOOR_HZ):   # clonable as-is → leave it
-                return
-            steps = 12.0 * math.log2(self._PITCH_TARGET_HZ / med)
-            shifted = librosa.effects.pitch_shift(y, sr=sr, n_steps=steps)
-            sf.write(str(dst), shifted, sr)
-            logger.info("Lifted too-deep reference %.0fHz -> ~%.0fHz (+%.1f st)",
-                        med, self._PITCH_TARGET_HZ, steps)
-        except Exception:  # noqa: BLE001
-            logger.warning("pitch lift skipped", exc_info=True)

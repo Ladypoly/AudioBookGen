@@ -27,6 +27,18 @@ from app.workers.render_all_worker import RenderAllWorker
 
 logger = logging.getLogger(__name__)
 
+_NARRATOR_ID = "erzaehler"
+_SPK_PALETTE = ["#3aa0ff", "#f783ac", "#63e6be", "#ffa94d", "#b794f6",
+                "#74c0fc", "#ffd43b", "#ff8787", "#69db7c", "#e599f7"]
+
+
+def _speaker_color(sid: str) -> str:
+    if sid == _NARRATOR_ID:
+        return "#9aa3b2"                       # narrator = neutral grey
+    import hashlib
+    h = int(hashlib.md5(sid.encode()).hexdigest(), 16)
+    return _SPK_PALETTE[h % len(_SPK_PALETTE)]
+
 
 class ChapterRow(QFrame):
     def __init__(self, info: dict, screen: "ChaptersScreen") -> None:
@@ -41,6 +53,12 @@ class ChapterRow(QFrame):
         lay.setSpacing(6)
 
         top = QHBoxLayout()
+        self.expand_btn = QPushButton("▸")
+        self.expand_btn.setObjectName("Ghost")
+        self.expand_btn.setFixedWidth(28)
+        self.expand_btn.setToolTip("Show the chapter script")
+        self.expand_btn.clicked.connect(self._toggle_script)
+        top.addWidget(self.expand_btn)
         self.title = QLabel(f"{info['number']}. {info['title']}")
         self.title.setObjectName("CardName")
         top.addWidget(self.title, stretch=1)
@@ -61,7 +79,70 @@ class ChapterRow(QFrame):
         self.bar.setTextVisible(False)
         self.bar.setVisible(False)
         lay.addWidget(self.bar)
+
+        # collapsible script view (built lazily on first expand)
+        self.script = QLabel()
+        self.script.setObjectName("Subtle")
+        self.script.setWordWrap(True)
+        self.script.setTextFormat(Qt.TextFormat.RichText)
+        self.script.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+        self.script.setVisible(False)
+        lay.addWidget(self.script)
+        self._script_built = False
+
         self._refresh_state()
+
+    # --- collapsible script ---------------------------------------------------
+    def mousePressEvent(self, event) -> None:  # noqa: N802
+        self._toggle_script()
+        super().mousePressEvent(event)
+
+    def _toggle_script(self) -> None:
+        if not self._script_built:
+            self._build_script()
+            self._script_built = True
+        show = not self.script.isVisible()
+        self.script.setVisible(show)
+        self.expand_btn.setText("▾" if show else "▸")
+
+    def _build_script(self) -> None:
+        proj = project_service.active()
+        chapter = (chapter_service.load_chapter(proj, self._info["chapter_id"])
+                   if proj is not None else None)
+        if chapter is None or not chapter.lines:
+            self.script.setText("<i>No script yet — produce chapters first.</i>")
+            return
+        self.script.setText(self._script_html(chapter))
+
+    def _script_html(self, chapter) -> str:
+        import html as _html
+
+        from app.core.config import CONFIG
+        from app.services import ambience, music_planner
+        names = {c.character_id: c.display_name for c in self._screen.characters}
+        rows = ["<div style='line-height:148%'>"]
+        amb = ambience.ambience_for_chapter(chapter)[0]
+        rows.append(f"<div style='color:#27c498'><b>AMBIENCE</b> · {_html.escape(amb)}</div>")
+        if CONFIG.tts.music_enabled:
+            mus = music_planner.music_for_chapter(chapter)[0]
+            rows.append(f"<div style='color:#9DAAF2'><b>MUSIC</b> · {_html.escape(mus)}</div>")
+        rows.append("<div style='color:#2e3650'>──────────</div>")
+        for line in chapter.lines:
+            sid = line.speaker_id
+            col = _speaker_color(sid)
+            who = _html.escape(names.get(sid, sid))
+            tag = "" if line.type.value == "dialogue" else \
+                f" <span style='color:#5b6376'>({line.type.value})</span>"
+            rows.append(
+                f"<div style='margin:4px 0'>"
+                f"<span style='color:{col};font-weight:700'>{who}</span>{tag} "
+                f"<span style='color:#c9d2e3'>{_html.escape(line.text)}</span></div>")
+            for cue in line.sfx:
+                rows.append(
+                    f"<div style='color:#f4db7d;margin:0 0 4px 1.6em'>"
+                    f"SFX <i>{cue.placement}</i> · {_html.escape(cue.prompt)}</div>")
+        rows.append("</div>")
+        return "".join(rows)
 
     def _rendered_file(self):
         proj = project_service.active()

@@ -15,6 +15,7 @@ logger = logging.getLogger(__name__)
 
 class VoiceDesignWorker(QThread):
     step = Signal(int, int)        # progress value, max
+    started_work = Signal()        # render lock acquired -> generating now (not queued)
     finished_ok = Signal(str)      # saved voice sample path
     failed = Signal(str)           # error
 
@@ -24,14 +25,16 @@ class VoiceDesignWorker(QThread):
 
     def run(self) -> None:  # noqa: D102
         try:
-            ollama_service.unload()             # free VRAM
-            comfy_launcher.ensure_stage("tts")  # tts_audio_suite (Qwen3 designer)
-            proj = project_service.active()
-            base = proj.voices_dir if proj is not None else Path("voices")
-            out = base / f"{self._char.character_id}.mp3"
-            voice_design.design_voice(
-                self._char, out, on_step=lambda v, m: self.step.emit(v, m)
-            )
+            with comfy_launcher.RENDER_LOCK:        # one render at a time (queue)
+                self.started_work.emit()
+                ollama_service.unload()             # free VRAM
+                comfy_launcher.ensure_stage("tts")  # tts_audio_suite (Qwen3 designer)
+                proj = project_service.active()
+                base = proj.voices_dir if proj is not None else Path("voices")
+                out = base / f"{self._char.character_id}.mp3"
+                voice_design.design_voice(
+                    self._char, out, on_step=lambda v, m: self.step.emit(v, m)
+                )
             self.finished_ok.emit(str(out))
         except Exception as err:  # noqa: BLE001
             logger.exception("Voice design failed")

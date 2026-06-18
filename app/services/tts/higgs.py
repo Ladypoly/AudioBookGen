@@ -44,7 +44,8 @@ class HiggsTTSEngine:
 
     def _ensure_reference(self, voice) -> str:
         """Higgs LoadAudio reads from ComfyUI's input/ folder. Copy the voice's
-        reference clip there and return the filename it should load."""
+        reference there AS-IS (no re-encode — keep the exact format that works)
+        under a stable per-voice name, always overwriting so the content is fresh."""
         if voice is None or not voice.ref_audio_path:
             return CONFIG.comfy.default_reference_audio
         src = Path(voice.ref_audio_path)
@@ -53,10 +54,17 @@ class HiggsTTSEngine:
             return CONFIG.comfy.default_reference_audio
         input_dir = CONFIG.comfy.comfy_dir / "ComfyUI" / "input"
         input_dir.mkdir(parents=True, exist_ok=True)
-        dst = input_dir / src.name
-        if not dst.exists() or dst.stat().st_mtime < src.stat().st_mtime:
-            shutil.copy2(src, dst)
-        return src.name
+        ref_name = f"ref_{voice.voice_id}.wav"
+        dst = input_dir / ref_name
+        # Higgs clones WAV references faithfully but DRIFTS (even flips gender)
+        # on MP3 references — so decode non-WAV sources to PCM WAV. WAV sources
+        # are copied byte-for-byte (don't touch what already works).
+        if src.suffix.lower() == ".wav":
+            shutil.copyfile(src, dst)
+        else:
+            from pydub import AudioSegment
+            AudioSegment.from_file(src).export(dst, format="wav")
+        return ref_name
 
     @staticmethod
     def _seed(text: str) -> int:

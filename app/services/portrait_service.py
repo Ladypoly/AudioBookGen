@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import json
 import logging
+import random
 from pathlib import Path
 
 from app.core.config import CONFIG, PortraitStyle
@@ -197,6 +198,10 @@ def generate_portrait(char: Character, style: PortraitStyle | None = None, on_st
     style = style or CONFIG.portrait_style
     out = portrait_path(char)
     out.parent.mkdir(parents=True, exist_ok=True)
+    # Random render seed each time, so re-generating a portrait that doesn't
+    # quite fit yields a fresh variation (the scene/outfit stay stable — those
+    # derive from the character id; only the sampler noise changes).
+    render_seed = random.randint(0, 2**31 - 1)
 
     if CONFIG.comfy.portrait_backend == "z_image":
         casting = _active_bible.casting if _active_bible is not None \
@@ -214,21 +219,22 @@ def generate_portrait(char: Character, style: PortraitStyle | None = None, on_st
             positive = build_zimage_prompt(char, style)
         negative = _ethnicity_negative(style.negative_prompt, casting)
         record: dict = {"backend": "z_image", "positive_prompt": positive,
-                        "negative_prompt": negative}
+                        "negative_prompt": negative, "seed": render_seed}
         replacements: dict[str, object] = {
             "{positive_prompt}": positive,
             "{negative_prompt}": negative,
             "{filename_prefix}": char.character_id,
-            "{seed}": _stable_seed(char.character_id),
+            "{seed}": render_seed,
         }
     else:  # ideogram JSON caption
         caption = build_caption(char, style)
         positive = caption_to_prompt(caption)
-        record = {"backend": "ideogram", "caption": caption, "positive_prompt": positive}
+        record = {"backend": "ideogram", "caption": caption,
+                  "positive_prompt": positive, "seed": render_seed}
         replacements = {
             "{positive_prompt}": positive,
             "{filename_prefix}": char.character_id,
-            "{seed}": _stable_seed(char.character_id),
+            "{seed}": render_seed,
         }
 
     # Save the exact prompt next to the image for inspection/repro.

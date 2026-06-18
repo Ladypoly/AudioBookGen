@@ -216,6 +216,13 @@ class TTSConfig:
     # so all characters end up equally loud (LUFS, true-peak limited).
     voice_norm_lufs: float = -20.0
     voice_norm_tp: float = -1.5
+    # De-essing intensity for the optimize step (0 = off, ~0.1-0.4 tames harsh
+    # S / ß sibilance that LUFS-boosting can exaggerate). Gentle by default.
+    voice_deess: float = 0.12
+    # High-shelf gain (dB) above ~6 kHz applied during optimize. Negative tames
+    # broadband hiss (mainly from the Enhance/super-resolution step). Off by
+    # default — only needed if a sample is hissy; raise it (e.g. -4) then.
+    voice_treble_db: float = 0.0
     design_reference_text: str = (
         "Hello, this is a generated voice for this character. "
         "This is how I sound when I speak calmly and clearly."

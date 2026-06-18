@@ -42,7 +42,7 @@ def _separate_vocals(src: Path, work: Path) -> Path | None:
     import sys
     out = work / "demucs"
     cmd = [sys.executable, "-m", "demucs", "--two-stems=vocals", "-o", str(out), str(src)]
-    res = subprocess.run(cmd, capture_output=True, text=True)
+    res = subprocess.run(cmd, capture_output=True, text=True, errors="replace")
     if res.returncode != 0:
         logger.warning("demucs failed: %s", res.stderr[-300:])
         return None
@@ -92,12 +92,20 @@ def _loudnorm(src: Path, out: Path) -> bool:
     from app.core.config import CONFIG
     if not shutil.which("ffmpeg"):
         return False
+    af = f"loudnorm=I={CONFIG.tts.voice_norm_lufs}:TP={CONFIG.tts.voice_norm_tp}:LRA=7"
+    pre = []
+    if CONFIG.tts.voice_deess > 0:                 # tame harsh S / ß
+        pre.append(f"deesser=i={CONFIG.tts.voice_deess}")
+    if CONFIG.tts.voice_treble_db != 0:            # tame broadband hiss / harshness
+        pre.append(f"highshelf=g={CONFIG.tts.voice_treble_db}:f=6000")
+    if pre:
+        af = ",".join(pre) + "," + af
     cmd = [
         "ffmpeg", "-y", "-i", str(src),
-        "-af", f"loudnorm=I={CONFIG.tts.voice_norm_lufs}:TP={CONFIG.tts.voice_norm_tp}:LRA=7",
+        "-af", af,
         "-ar", "48000", str(out),
     ]
-    res = subprocess.run(cmd, capture_output=True, text=True)
+    res = subprocess.run(cmd, capture_output=True, text=True, errors="replace")
     return res.returncode == 0 and out.exists()
 
 

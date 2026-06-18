@@ -150,6 +150,25 @@ class CharacterCard(QFrame):
         self.drop_hint.setAlignment(Qt.AlignmentFlag.AlignCenter)
         root.addWidget(self.drop_hint)
         self._update_voice_label()
+        self._autoplay = False
+        self._refresh_state()
+
+    # --- card status colour --------------------------------------------------
+    _STATE_BORDER = {
+        "queued": "#f4db7d",       # waiting in the render queue
+        "generating": "#3a6df0",   # actively generating
+        "complete": "#4ade80",     # voice ready
+        "incomplete": "#2e3650",   # no voice yet
+    }
+
+    def _set_state(self, state: str) -> None:
+        self._state = state
+        colour = self._STATE_BORDER.get(state, "#2e3650")
+        width = 2 if state in ("queued", "generating", "complete") else 1
+        self.setStyleSheet(f"QFrame#Card {{ border: {width}px solid {colour}; }}")
+
+    def _refresh_state(self) -> None:
+        self._set_state("complete" if self._char.voice_sample else "incomplete")
 
     @staticmethod
     def _divider() -> QFrame:
@@ -202,8 +221,8 @@ class CharacterCard(QFrame):
             self.setStyleSheet("QFrame#Card { border: 1px solid #3a6df0; }")
 
     def dragLeaveEvent(self, event) -> None:  # noqa: N802
-        self.drop_hint.setText("⤓ drop a voice sample here")
-        self.setStyleSheet("")
+        self._update_voice_label()
+        self._set_state(getattr(self, "_state", "incomplete"))   # restore status colour
 
     def dropEvent(self, event: QDropEvent) -> None:  # noqa: N802
         self.setStyleSheet("")
@@ -211,6 +230,16 @@ class CharacterCard(QFrame):
         if not path:
             return
         from app.services import project_service
+        from app.ui.voice_drop_dialog import VoiceDropDialog
+
+        # Ask: apply the dropped sample as-is, or optimize + preview first.
+        dlg = VoiceDropDialog(str(path), self)
+        if not dlg.exec():
+            return
+        chosen = dlg.result_path()
+        if not chosen:
+            return
+        path = Path(chosen)
 
         # Release any file the player holds (Windows locks it, which otherwise
         # makes the copy fail with "could not save voice").
@@ -236,6 +265,7 @@ class CharacterCard(QFrame):
         self._update_voice_label()
         self.voice_assigned.emit(self._char.character_id, dest)
         event.acceptProposedAction()
+        self._start_preview_render(play=False)   # render German preview, no auto-play
 
     def _stop_player(self) -> None:
         from PySide6.QtCore import QUrl
@@ -283,7 +313,9 @@ class CharacterCard(QFrame):
     def _generate_voice(self) -> None:
         self.gen_voice_btn.setEnabled(False)
         self.gen_voice_btn.setText("…")
+        self._set_state("queued")
         self._design_worker = VoiceDesignWorker(self._char, self)
+        self._design_worker.started_work.connect(lambda: self._set_state("generating"))
         self._design_worker.step.connect(
             lambda v, m: self.gen_voice_btn.setText(f"{v}/{m}")
         )
@@ -295,16 +327,39 @@ class CharacterCard(QFrame):
         self.gen_voice_btn.setEnabled(True)
         self.gen_voice_btn.setText("Generate")
         self._char.voice_sample = path
-        # The Qwen sample is English (timbre only); play renders German via Higgs.
+        # The Qwen sample is English (timbre only); render the German Higgs
+        # preview now so it's ready — but DON'T auto-play it.
         self._preview_path = None
         self._update_voice_label()
         self.voice_assigned.emit(self._char.character_id, path)
-        self._toggle_play()  # immediately render + play a German Higgs preview
+        self._start_preview_render(play=False)
 
     def _voice_design_failed(self, _msg: str) -> None:
         self.gen_voice_btn.setEnabled(True)
         self.gen_voice_btn.setText("Generate")
         self.gen_voice_btn.setToolTip("Voice design failed — check ComfyUI / TTS stage")
+        self._refresh_state()
+
+    def _start_preview_render(self, play: bool) -> None:
+        """Render the German Higgs preview. play=True auditions it on completion."""
+        self._autoplay = play
+        self.play_btn.setEnabled(False)
+        self._set_state("queued")
+        self.voice_name_lbl.setText("preview queued…")
+        self._tts_worker = TTSPreviewWorker(
+            self._voice_for_preview(), out_path=self._preview_out_path(), parent=self
+        )
+        self._tts_worker.started_work.connect(self._on_render_started)
+        self._tts_worker.step.connect(
+            lambda v, m: self.voice_name_lbl.setText(f"rendering {v}/{m}…")
+        )
+        self._tts_worker.finished_ok.connect(self._render_done)
+        self._tts_worker.failed.connect(self._render_fail)
+        self._tts_worker.start()
+
+    def _on_render_started(self) -> None:
+        self._set_state("generating")
+        self.voice_name_lbl.setText("rendering preview…")
 
     def _toggle_play(self) -> None:
         if self._player.playbackState() == QMediaPlayer.PlaybackState.PlayingState:
@@ -313,28 +368,21 @@ class CharacterCard(QFrame):
         if self._preview_path and Path(self._preview_path).exists():
             self._play_file(self._preview_path)
             return
-        # render first (Higgs, German), then play — saved for reuse
-        self.play_btn.setEnabled(False)
-        self.voice_name_lbl.setText("rendering preview…")
-        self._tts_worker = TTSPreviewWorker(
-            self._voice_for_preview(), out_path=self._preview_out_path(), parent=self
-        )
-        self._tts_worker.step.connect(
-            lambda v, m: self.voice_name_lbl.setText(f"rendering {v}/{m}…")
-        )
-        self._tts_worker.finished_ok.connect(self._render_done)
-        self._tts_worker.failed.connect(self._render_fail)
-        self._tts_worker.start()
+        self._start_preview_render(play=True)   # render then play (user pressed play)
 
     def _render_done(self, path: str) -> None:
         self.play_btn.setEnabled(True)
         self._preview_path = path
         self._update_voice_label()
-        self._play_file(path)
+        self._set_state("complete")
+        if self._autoplay:
+            self._play_file(path)
+        self._autoplay = False
 
     def _render_fail(self, _msg: str) -> None:
         self.play_btn.setEnabled(True)
         self.voice_name_lbl.setText("preview failed — check ComfyUI")
+        self._refresh_state()
 
     def _play_file(self, path: str) -> None:
         self._player.setSource(QUrl.fromLocalFile(path))

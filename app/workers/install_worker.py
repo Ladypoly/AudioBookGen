@@ -37,7 +37,7 @@ class InstallWorker(QThread):
             res = subprocess.run(
                 [sys.executable, "-m", "pip", "install",
                  "--no-warn-script-location", self._package],
-                capture_output=True, text=True, env=env,
+                capture_output=True, text=True, errors="replace", env=env,
             )
             out = (res.stdout or "") + "\n" + (res.stderr or "")
             LOG_DIR.mkdir(parents=True, exist_ok=True)

@@ -101,7 +101,7 @@ def _master(path: Path, lufs: float, tp: float) -> None:
         "-af", f"loudnorm=I={lufs}:TP={tp}:LRA=11",
         "-c:a", "libmp3lame", "-b:a", "192k", str(tmp),
     ]
-    res = subprocess.run(cmd, capture_output=True, text=True)
+    res = subprocess.run(cmd, capture_output=True, text=True, errors="replace")
     if res.returncode == 0 and tmp.exists():
         tmp.replace(path)
     else:

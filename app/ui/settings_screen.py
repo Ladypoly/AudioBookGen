@@ -28,29 +28,10 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from app.services import demo_service, settings_service, voice_optimize
+from app.services import demo_service, settings_service
 from app.ui.waveform_widget import WaveformWidget
 from app.workers.demo_worker import DemoGenerateWorker, DemoRemixWorker
-from app.workers.install_worker import InstallWorker
 from app.workers.models_worker import ModelsWorker
-from app.workers.voice_optimize_worker import VoiceOptimizeWorker
-
-
-class _DropLineEdit(QLineEdit):
-    """A line edit that accepts a dropped audio file path."""
-
-    def __init__(self, *a, **k) -> None:
-        super().__init__(*a, **k)
-        self.setAcceptDrops(True)
-
-    def dragEnterEvent(self, e) -> None:  # noqa: N802
-        if e.mimeData().hasUrls():
-            e.acceptProposedAction()
-
-    def dropEvent(self, e) -> None:  # noqa: N802
-        urls = e.mimeData().urls()
-        if urls:
-            self.setText(urls[0].toLocalFile())
 
 logger = logging.getLogger(__name__)
 
@@ -108,32 +89,18 @@ class SettingsScreen(QWidget):
         by_section.pop("LLM", None)
         col.addWidget(self._llm_box())
 
-        # --- voice optimize debug panel --------------------------------------
-        col.addWidget(self._optimize_box())
-
         # --- the remaining config sections below -----------------------------
         for section, fields in by_section.items():
             col.addWidget(_section_box(section, fields))
 
-        # media player for the demo
+        # Demo player.
         self._player = QMediaPlayer(self)
         self._audio = QAudioOutput(self)
         self._player.setAudioOutput(self._audio)
         self._player.positionChanged.connect(self._on_pos)
         self._player.playbackStateChanged.connect(self._on_state)
         self.wave.seek_requested.connect(self._seek)
-
-        # second player for the optimize debug panel (original vs optimized)
-        self._opt_player = QMediaPlayer(self)
-        self._opt_aout = QAudioOutput(self)
-        self._opt_player.setAudioOutput(self._opt_aout)
-        self._opt_player.positionChanged.connect(self._on_opt_pos)
-        self._opt_player.durationChanged.connect(self._on_opt_duration)
-        self._opt_player.playbackStateChanged.connect(self._opt_update_buttons)
-        self._opt_out_path = ""
-        self._opt_cur = None             # 'in' | 'out' currently loaded
-        self._opt_pending_frac = None
-        self._opt_worker = None
+        self._cur_src = ""
 
         # debounce for live remix
         self._remix_timer = QTimer(self)
@@ -277,199 +244,6 @@ class SettingsScreen(QWidget):
         for w in self._llm_openai:
             self._llm_form.setRowVisible(w, backend == "openai")
 
-    # --- voice optimize debug panel -----------------------------------------
-    def _optimize_box(self):
-        avail = voice_optimize.available()
-        box = QGroupBox("Optimize voice sample (debug)")
-        lay = QVBoxLayout(box)
-
-        row = QHBoxLayout()
-        row.addWidget(QLabel("Input:"))
-        self._opt_in = _DropLineEdit()
-        self._opt_in.setPlaceholderText("drop an audio file here, or browse…")
-        self._opt_in.textChanged.connect(self._opt_input_changed)
-        row.addWidget(self._opt_in, 1)
-        browse = QPushButton("…")
-        browse.setFixedWidth(34)
-        browse.clicked.connect(self._opt_pick)
-        row.addWidget(browse)
-        lay.addLayout(row)
-
-        opts = QHBoxLayout()
-        self._opt_sep = QCheckBox("Separate (Demucs)")
-        self._opt_den = QCheckBox("Denoise (DeepFilterNet)")
-        self._opt_enh = QCheckBox("Enhance (VoiceFixer)")
-        # checkbox -> (availability key, pip package, base label)
-        self._opt_libs = {
-            self._opt_sep: ("separate (demucs)", "demucs", "Separate (Demucs)"),
-            self._opt_den: ("denoise (deepfilternet)", "deepfilternet", "Denoise (DeepFilterNet)"),
-            self._opt_enh: ("enhance (voicefixer)", "voicefixer", "Enhance (VoiceFixer)"),
-        }
-        self._install_worker = None
-        for cb, (key, pkg, base) in self._opt_libs.items():
-            if avail[key]:
-                cb.setChecked(cb is self._opt_den)   # denoise on by default
-                cb.setToolTip("installed")
-            else:                                    # checking it auto-installs
-                cb.setText(base + "  ·  click to install")
-                cb.setToolTip(f"Not installed — check to auto-install (pip install {pkg})")
-            cb.toggled.connect(lambda checked, c=cb: self._opt_lib_toggled(c, checked))
-            opts.addWidget(cb)
-        opts.addStretch(1)
-        lay.addLayout(opts)
-
-        note = QLabel("Always: trim silence + loudness-normalize (LUFS) so every "
-                      "voice ends up equally loud and clear.")
-        note.setObjectName("Subtle")
-        note.setWordWrap(True)
-        lay.addWidget(note)
-
-        act = QHBoxLayout()
-        self._opt_btn = QPushButton("Optimize + export")
-        self._opt_btn.clicked.connect(self._run_optimize)
-        self._opt_status = QLabel("")
-        self._opt_status.setObjectName("Subtle")
-        act.addWidget(self._opt_btn)
-        act.addWidget(self._opt_status, 1)
-        lay.addLayout(act)
-
-        grid = QHBoxLayout()
-        left = QVBoxLayout()
-        left.addWidget(QLabel("Original"))
-        self._opt_wave_in = WaveformWidget()
-        self._opt_wave_in.seek_requested.connect(self._opt_seek)
-        left.addWidget(self._opt_wave_in)
-        self._opt_play_in = QPushButton("▶ original")
-        self._opt_play_in.clicked.connect(lambda: self._opt_toggle("in"))
-        left.addWidget(self._opt_play_in)
-        right = QVBoxLayout()
-        right.addWidget(QLabel("Optimized"))
-        self._opt_wave_out = WaveformWidget()
-        self._opt_wave_out.seek_requested.connect(self._opt_seek)
-        right.addWidget(self._opt_wave_out)
-        self._opt_play_out = QPushButton("▶ optimized")
-        self._opt_play_out.setEnabled(False)
-        self._opt_play_out.clicked.connect(lambda: self._opt_toggle("out"))
-        right.addWidget(self._opt_play_out)
-        grid.addLayout(left)
-        grid.addLayout(right)
-        lay.addLayout(grid)
-        return box
-
-    def _opt_lib_toggled(self, cb, checked: bool) -> None:
-        """Checking a not-installed optimizer auto-installs it via pip."""
-        if not checked:
-            return
-        key, pkg, base = self._opt_libs[cb]
-        if voice_optimize.available()[key]:
-            return                                    # already installed
-        if self._install_worker is not None and self._install_worker.isRunning():
-            self._opt_status.setText("An install is already running…")
-            cb.setChecked(False)
-            return
-        cb.setEnabled(False)
-        cb.setText(base + f"  ·  installing {pkg}…")
-        self._opt_status.setText(f"Installing {pkg} … (may take a few minutes)")
-        self._install_worker = InstallWorker(pkg, self)
-        self._install_worker.done.connect(
-            lambda ok, msg, c=cb: self._on_install_done(c, ok, msg))
-        self._install_worker.start()
-
-    def _on_install_done(self, cb, ok: bool, msg: str) -> None:
-        import importlib
-        importlib.invalidate_caches()
-        key, pkg, base = self._opt_libs[cb]
-        cb.setEnabled(True)
-        if ok and voice_optimize.available()[key]:
-            cb.setText(base)
-            cb.setToolTip("installed")
-            cb.setChecked(True)
-            self._opt_status.setText(f"Installed {pkg} ✓ — ready to use.")
-        else:
-            cb.setChecked(False)
-            cb.setText(base + "  ·  install failed")
-            self._opt_status.setText(f"Install failed for {pkg}: {msg[:200]}")
-
-    def _opt_pick(self) -> None:
-        f, _ = QFileDialog.getOpenFileName(self, "Audio", "",
-                                           "Audio (*.wav *.mp3 *.ogg *.flac)")
-        if f:
-            self._opt_in.setText(f)
-
-    def _opt_input_changed(self, path: str) -> None:
-        self._opt_wave_in.set_audio(path if path and Path(path).exists() else None)
-
-    def _run_optimize(self) -> None:
-        path = self._opt_in.text().strip()
-        if not path or not Path(path).exists():
-            self._opt_status.setText("pick an input file first")
-            return
-        self._save()                          # persist LUFS target etc.
-        self._opt_btn.setEnabled(False)
-        self._opt_status.setText("Optimizing…")
-        self._opt_worker = VoiceOptimizeWorker(
-            path, self._opt_sep.isChecked(), self._opt_den.isChecked(),
-            self._opt_enh.isChecked(), parent=self)
-        self._opt_worker.finished_ok.connect(self._on_optimized)
-        self._opt_worker.failed.connect(self._on_opt_failed)
-        self._opt_worker.start()
-
-    def _on_optimized(self, res: dict) -> None:
-        self._opt_btn.setEnabled(True)
-        self._opt_out_path = res.get("out", "")
-        done = ", ".join(res.get("done", []))
-        skip = ", ".join(res.get("skipped", []))
-        msg = f"Done: {done}." + (f"  Skipped: {skip}." if skip else "")
-        self._opt_status.setText(msg + f"  →  {self._opt_out_path}")
-        if self._opt_out_path and Path(self._opt_out_path).exists():
-            self._opt_wave_out.set_audio(self._opt_out_path)
-            self._opt_play_out.setEnabled(True)
-
-    def _on_opt_failed(self, msg: str) -> None:
-        self._opt_btn.setEnabled(True)
-        self._opt_status.setText(f"Failed: {msg}")
-
-    def _opt_toggle(self, which: str) -> None:
-        path = self._opt_in.text().strip() if which == "in" else self._opt_out_path
-        if not path or not Path(path).exists():
-            return
-        playing = self._opt_player.playbackState() == QMediaPlayer.PlaybackState.PlayingState
-        if self._opt_cur == which:               # same source: pause/resume
-            self._opt_player.pause() if playing else self._opt_player.play()
-            return
-        # switch to the other source, keep the same position (synced timelines)
-        self._opt_pending_frac = self._opt_fraction()
-        self._opt_cur = which
-        self._opt_player.setSource(QUrl.fromLocalFile(path))
-        self._opt_player.play()
-
-    def _opt_fraction(self) -> float:
-        dur = self._opt_player.duration()
-        return (self._opt_player.position() / dur) if dur else 0.0
-
-    def _on_opt_duration(self, dur: int) -> None:
-        if self._opt_pending_frac is not None and dur:
-            self._opt_player.setPosition(int(self._opt_pending_frac * dur))
-            self._opt_pending_frac = None
-
-    def _on_opt_pos(self, ms: int) -> None:
-        dur = self._opt_player.duration() or 1
-        frac = ms / dur
-        self._opt_wave_in.set_progress(frac)     # both timelines stay synced
-        self._opt_wave_out.set_progress(frac)
-
-    def _opt_update_buttons(self, state) -> None:
-        playing = state == QMediaPlayer.PlaybackState.PlayingState
-        self._opt_play_in.setText(
-            ("⏸ " if playing and self._opt_cur == "in" else "▶ ") + "original")
-        self._opt_play_out.setText(
-            ("⏸ " if playing and self._opt_cur == "out" else "▶ ") + "optimized")
-
-    def _opt_seek(self, frac: float) -> None:
-        dur = self._opt_player.duration()
-        if dur:
-            self._opt_player.setPosition(int(frac * dur))
-
     # --- widget helpers -----------------------------------------------------
     @staticmethod
     def _make_widget(kind: str, value, choices):
@@ -588,16 +362,27 @@ class SettingsScreen(QWidget):
         pos = self._player.position()
         self.wave.set_audio(str(path))
         self.play_btn.setEnabled(True)
+        self._cur_src = str(path)
         self._player.setSource(QUrl.fromLocalFile(str(path)))
         if keep_pos:
             self._player.setPosition(pos)
 
-    # --- playback -----------------------------------------------------------
+    # --- demo playback ------------------------------------------------------
+    def _set_src(self, path: str) -> None:
+        if self._cur_src != path:
+            self._cur_src = path
+            self._player.setSource(QUrl.fromLocalFile(path))
+
     def _toggle_play(self) -> None:
+        path = str(demo_service.demo_audio_path())
+        if not Path(path).exists():
+            return
         if self._player.playbackState() == QMediaPlayer.PlaybackState.PlayingState:
             self._player.pause()
-        else:
-            self._player.play()
+            return
+        self._player.setLoops(QMediaPlayer.Loops.Once)
+        self._set_src(path)
+        self._player.play()
 
     def _on_state(self, state) -> None:
         playing = state == QMediaPlayer.PlaybackState.PlayingState

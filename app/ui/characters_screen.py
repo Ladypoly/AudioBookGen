@@ -11,19 +11,14 @@ import logging
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
-    QCheckBox,
-    QFileDialog,
-    QHBoxLayout,
     QLabel,
     QMessageBox,
     QPushButton,
     QScrollArea,
-    QSpinBox,
     QVBoxLayout,
     QWidget,
 )
 
-from app.core.config import CONFIG
 from app.schemas.characters import Character
 from app.services import portrait_service, project_service
 from app.ui.ascii_art import READING_CAT
@@ -70,45 +65,25 @@ class CharactersScreen(QWidget):
         # action bar — a wrapping flow layout so the window can be made narrow
         bar_host = QWidget()
         bar = FlowLayout(bar_host, margin=0, spacing=8)
-        self.load_btn = QPushButton("Choose PDF…")
-        self.load_btn.clicked.connect(self._choose_pdf)
-        self.extract_btn = QPushButton("Extract Characters")
-        self.extract_btn.setObjectName("Primary")
-        self.extract_btn.setEnabled(False)
-        self.extract_btn.clicked.connect(self._start_extraction)
         self.portraits_btn = QPushButton("Generate all portraits")
         self.portraits_btn.setEnabled(False)
         self.portraits_btn.clicked.connect(self._start_portraits)
         self.voices_btn = QPushButton("Generate all voices")
         self.voices_btn.setEnabled(False)
         self.voices_btn.clicked.connect(self._start_voices)
+        self.reextract_btn = QPushButton("Re-extract")
+        self.reextract_btn.setToolTip("Re-run character extraction for this book.")
+        self.reextract_btn.setEnabled(False)
+        self.reextract_btn.clicked.connect(self._start_extraction)
         self.cancel_btn = QPushButton("Cancel")
         self.cancel_btn.setVisible(False)
         self.cancel_btn.clicked.connect(self._cancel)
-        for b in (self.load_btn, self.extract_btn, self.portraits_btn,
-                  self.voices_btn, self.cancel_btn):
+        for b in (self.portraits_btn, self.voices_btn, self.reextract_btn,
+                  self.cancel_btn):
             bar.addWidget(b)
-
-        self.test_check = QCheckBox("Test mode")
-        self.test_check.setChecked(True)
-        self.test_check.setToolTip("Only analyze the first N chunks for a quick test run.")
-        self.test_spin = QSpinBox()
-        self.test_spin.setRange(1, 500)
-        self.test_spin.setValue(5)
-        self.test_spin.setSuffix(" chunks")
-        self.test_check.toggled.connect(self.test_spin.setEnabled)
-        bar.addWidget(self.test_check)
-        bar.addWidget(self.test_spin)
-
-        self.web_check = QCheckBox("Web search")
-        self.web_check.setToolTip(
-            "Use DuckDuckGo to enrich the style and character looks/voice "
-            "(online; spoiler-filtered). Off = fully local."
-        )
-        bar.addWidget(self.web_check)
         root.addWidget(bar_host)
 
-        self.path_label = QLabel("No PDF selected")
+        self.path_label = QLabel("")
         self.path_label.setObjectName("Subtle")
         self.path_label.setWordWrap(True)
         root.addWidget(self.path_label)
@@ -131,23 +106,24 @@ class CharactersScreen(QWidget):
         self.grid = FlowLayout(self.cards_host, margin=12, spacing=16)
         self.scroll.setWidget(self.cards_host)
         root.addWidget(self.scroll, stretch=1)
-        self._show_empty("No characters yet — choose a PDF and extract.")
+        self._show_empty("No characters yet.")
 
     # --- actions -------------------------------------------------------------
 
-    def _choose_pdf(self) -> None:
-        path, _ = QFileDialog.getOpenFileName(
-            self, "Choose book PDF", "", "PDF files (*.pdf)"
-        )
-        if path:
-            self.open_pdf(path)
-
     def open_pdf(self, path: str) -> None:
-        """Public entry point (used by the dashboard) to load/open a book."""
+        """Open an existing project (load its saved characters)."""
         self._pdf_path = path
         self.path_label.setText(path)
-        self.extract_btn.setEnabled(True)
+        self.reextract_btn.setEnabled(True)
         self._load_existing(path)
+
+    def start_new(self, path: str) -> None:
+        """New project: create it and immediately run extraction with progress."""
+        self._pdf_path = path
+        self.path_label.setText(path)
+        self.reextract_btn.setEnabled(True)
+        project_service.open_project(path)     # create folder + make active
+        self._start_extraction()
 
     def _load_existing(self, path: str) -> None:
         """Reopen a previously-extracted book from its project folder."""
@@ -172,11 +148,6 @@ class CharactersScreen(QWidget):
     def _start_extraction(self) -> None:
         if not self._pdf_path:
             return
-        # apply test-mode chunk limit (None = whole book)
-        CONFIG.extraction.max_chunks = (
-            self.test_spin.value() if self.test_check.isChecked() else None
-        )
-        CONFIG.extraction.web_search = self.web_check.isChecked()
         self._clear_cards()
         self._characters = []
         self._set_running(True)
@@ -296,8 +267,7 @@ class CharactersScreen(QWidget):
 
     def _set_running(self, running: bool) -> None:
         self.cancel_btn.setVisible(running)
-        self.load_btn.setEnabled(not running)
-        self.extract_btn.setEnabled(not running and self._pdf_path is not None)
+        self.reextract_btn.setEnabled(not running and self._pdf_path is not None)
         if running:
             self.portraits_btn.setEnabled(False)
             self.voices_btn.setEnabled(False)

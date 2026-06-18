@@ -18,6 +18,8 @@ logger = logging.getLogger(__name__)
 
 class WaveformWidget(QWidget):
     seek_requested = Signal(float)   # 0..1
+    hovered = Signal(float)          # 0..1 cursor position while hovering
+    hover_off = Signal()             # cursor left the widget
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -65,8 +67,19 @@ class WaveformWidget(QWidget):
             self.seek_requested.emit(max(0.0, min(1.0, e.position().x() / self.width())))
 
     def mouseMoveEvent(self, e) -> None:  # noqa: N802
-        if e.buttons() & Qt.MouseButton.LeftButton and self._peaks and self.width() > 0:
-            self.seek_requested.emit(max(0.0, min(1.0, e.position().x() / self.width())))
+        if not self._peaks or self.width() <= 0:
+            return
+        frac = max(0.0, min(1.0, e.position().x() / self.width()))
+        if e.buttons() & Qt.MouseButton.LeftButton:
+            self.seek_requested.emit(frac)
+        self.hovered.emit(frac)
+
+    def enterEvent(self, e) -> None:  # noqa: N802
+        if self._peaks and self.width() > 0:
+            self.hovered.emit(max(0.0, min(1.0, e.position().x() / self.width())))
+
+    def leaveEvent(self, _e) -> None:  # noqa: N802
+        self.hover_off.emit()
 
     # --- paint --------------------------------------------------------------
     def paintEvent(self, _e) -> None:  # noqa: N802

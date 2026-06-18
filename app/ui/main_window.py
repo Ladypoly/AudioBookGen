@@ -63,6 +63,9 @@ class MainWindow(QMainWindow):
         self.nav.setObjectName("Nav")
         for name in _NAV_ITEMS:
             QListWidgetItem(name, self.nav)
+        # Characters + Chapters only appear once a project is open.
+        self.nav.setRowHidden(1, True)
+        self.nav.setRowHidden(2, True)
         self.nav.currentRowChanged.connect(self._switch)
         side_lay.addWidget(self.nav)
         layout.addWidget(sidebar)
@@ -71,27 +74,43 @@ class MainWindow(QMainWindow):
         self.stack = QStackedWidget()
         self.dashboard = DashboardScreen()
         self.characters = CharactersScreen()
+        self.chapters = ChaptersScreen()
         self.stack.addWidget(self.dashboard)
         self.stack.addWidget(self.characters)
-        self.stack.addWidget(ChaptersScreen())
+        self.stack.addWidget(self.chapters)
         self.stack.addWidget(SettingsScreen())
         layout.addWidget(self.stack, stretch=1)
 
-        # dashboard -> open/create a project in the Characters screen
-        self.dashboard.open_project.connect(self._open_in_characters)
-        self.dashboard.new_project.connect(self._open_in_characters)
+        # dashboard -> open an existing project, or create a new one (extract)
+        self.dashboard.open_project.connect(self._open_project)
+        self.dashboard.new_project.connect(self._new_project)
 
         self.setCentralWidget(root)
         self.nav.setCurrentRow(0)  # open Dashboard
 
-    def _open_in_characters(self, pdf_path: str) -> None:
-        if pdf_path:
-            self.characters.open_pdf(pdf_path)
+    def _reveal_project_screens(self) -> None:
+        self.nav.setRowHidden(1, False)   # Characters
+        self.nav.setRowHidden(2, False)   # Chapters
+
+    def _open_project(self, pdf_path: str) -> None:
+        if not pdf_path:
+            return
+        self.characters.open_pdf(pdf_path)
+        self._reveal_project_screens()
         self.nav.setCurrentRow(1)
+
+    def _new_project(self, pdf_path: str) -> None:
+        if not pdf_path:
+            return
+        self._reveal_project_screens()
+        self.nav.setCurrentRow(1)
+        self.characters.start_new(pdf_path)   # opens project + extracts with progress
 
     def _switch(self, row: int) -> None:
         if row >= 0:
             self.stack.setCurrentIndex(row)
+            if row == 2:
+                self.chapters.refresh()
 
     def closeEvent(self, event: QCloseEvent) -> None:
         """Stop any ComfyUI instance we launched when the app closes."""

@@ -28,9 +28,11 @@ _GENDER = {"male": "man", "female": "woman", "ambiguous": "person", "unknown": "
 # Explicit acoustic age cues — Qwen's age control is weak without them
 # (e.g. "elderly" alone does not sound old; the tremor/thin/slow cues do).
 _AGE_ACOUSTIC = {
-    "child": "a small child's voice, bright and high-pitched, light and little",
-    "teen": "a youthful adolescent voice, fairly high and bright, still young",
-    "young_adult": "a youthful adult voice, clear and fresh",
+    "child": "a young child's voice, around 8 years old, bright and high-pitched, light and little",
+    "teen": ("a teenager around 16 years old — youthful but clearly PAST childhood; "
+             "the voice has already broken/matured, definitely NOT a small child"),
+    "young_adult": ("a fully grown young adult in their twenties — a mature, "
+                    "grown-up adult voice, NOT a teenager and NOT a child"),
     "adult": "a mature adult voice in their prime",
     "elderly": ("a distinctly aged, elderly voice — thin and quavering with a "
                 "noticeable tremor, breathy and frail, slow and careful in pace, "
@@ -47,25 +49,35 @@ def build_voice_description(char: Character) -> str:
     English accent. Higgs later clones this timbre to speak German."""
     from app.core.config import CONFIG
 
-    age = _AGE.get(char.age_band.value, "an")
-    gender = _GENDER.get(char.gender_guess.value, "person")
-    if char.age_band.value in ("child", "teen"):
-        gender = {"male": "boy", "female": "girl"}.get(char.gender_guess.value, gender)
-    traits = ", ".join(char.vocal_traits[:6]) or char.voice_hint or "natural, clear"
+    g = char.gender_guess.value
+    ageb = char.age_band.value
     accent = CONFIG.tts.design_accent
-    age_acoustic = _AGE_ACOUSTIC.get(char.age_band.value, "an adult voice")
+    age_acoustic = _AGE_ACOUSTIC.get(ageb, "a mature adult voice")
+    traits = ", ".join(char.vocal_traits[:6]) or char.voice_hint or "natural, clear"
+
+    # Gender is the attribute Qwen drifts on most, so state it FIRST, in caps,
+    # with the pitch register, and reinforce it at the end.
+    if ageb in ("child", "teen") and g in ("male", "female"):
+        kid = "boy" if g == "male" else "girl"
+        lead = (f"A {'MALE' if g == 'male' else 'FEMALE'} young person — a {kid}'s voice")
+    elif g == "male":
+        lead = "A MALE voice — a man, distinctly masculine, low and chest-resonant in pitch"
+    elif g == "female":
+        lead = "A FEMALE voice — a woman, distinctly feminine, higher in pitch"
+    else:
+        lead = "A person's voice"
+    reinforce = {"male": "Keep it unmistakably male and masculine.",
+                 "female": "Keep it unmistakably female and feminine."}.get(g, "")
 
     parts = [
-        f"The voice of {age} {gender} with a {accent} accent.",
-        # Age is stated acoustically AND first, because it is the hardest
-        # attribute for the model to honour.
-        f"Age and timbre: {age_acoustic}.",
+        f"{lead}, with a {accent} accent.",
+        f"Age: {age_acoustic}.",
         f"Vocal qualities: {traits}.",
     ]
     if char.context:
-        parts.append(f"Character: {char.context}")
-    if char.personality_notes:
-        parts.append(char.personality_notes)
+        parts.append(f"Character: {char.context[:200]}")
+    if reinforce:
+        parts.append(reinforce)
     parts.append("Natural, clear articulation, fitting the character.")
     return " ".join(parts)
 

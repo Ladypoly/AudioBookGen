@@ -75,7 +75,7 @@ def export_m4b(project, infos: list[dict], bitrate: str = "128k") -> Path:
         str(out),
     ]
     logger.info("Exporting M4B: %d chapters -> %s", len(entries), out)
-    res = subprocess.run(cmd, capture_output=True, text=True)
+    res = subprocess.run(cmd, capture_output=True, text=True, errors="replace")
     if res.returncode != 0:
         raise RuntimeError(f"ffmpeg failed: {res.stderr[-800:]}")
     return out

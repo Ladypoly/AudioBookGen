@@ -57,6 +57,8 @@ FIELDS: list[tuple] = [
     ("Voice", "Design language", "tts.design_language", "choice", ["English", "Chinese"]),
     ("Voice", "Optimize loudness target (LUFS)", "tts.voice_norm_lufs", "float", None),
     ("Voice", "Optimize true-peak (dBTP)", "tts.voice_norm_tp", "float", None),
+    ("Voice", "Optimize de-ess (0=off..1)", "tts.voice_deess", "float", None),
+    ("Voice", "Optimize treble cut dB (hiss, 0=off)", "tts.voice_treble_db", "float", None),
 
     ("Export", "MP3 bitrate", "tts.mp3_bitrate", "choice",
      ["96k", "128k", "160k", "192k", "256k", "320k"]),

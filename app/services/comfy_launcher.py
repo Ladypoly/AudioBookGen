@@ -13,6 +13,7 @@ from __future__ import annotations
 import logging
 import subprocess
 import sys
+import threading
 import time
 
 import httpx
@@ -26,6 +27,10 @@ logger = logging.getLogger(__name__)
 class LauncherError(RuntimeError):
     pass
 
+
+# Serializes single (card-triggered) renders so concurrent "Generate" clicks
+# queue one at a time instead of racing stage management on one ComfyUI.
+RENDER_LOCK = threading.Lock()
 
 _process: subprocess.Popen | None = None
 _current_stage: str | None = None
@@ -184,7 +189,7 @@ def _kill_on_port(port: int) -> None:
     if sys.platform != "win32":
         return
     out = subprocess.run(
-        ["netstat", "-ano", "-p", "TCP"], capture_output=True, text=True
+        ["netstat", "-ano", "-p", "TCP"], capture_output=True, text=True, errors="replace"
     ).stdout
     # Locale-independent: a listening socket has local addr ...:<port> and a
     # foreign addr of 0.0.0.0:0 (the state word is localized, e.g. "ABHÖREN").

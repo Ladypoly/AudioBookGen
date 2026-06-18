@@ -55,8 +55,10 @@ def _redirect_voicefixer() -> None:
                 return
         link.parent.mkdir(parents=True, exist_ok=True)
         if os.name == "nt":
+            # Don't capture: mklink's localized output (cp1252) breaks text-mode
+            # decoding on a German Windows. We don't need the output anyway.
             subprocess.run(["cmd", "/c", "mklink", "/J", str(link), str(target)],
-                           capture_output=True, text=True)
+                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         else:
             link.symlink_to(target, target_is_directory=True)
         logger.info("voicefixer cache -> %s", target)

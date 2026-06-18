@@ -22,6 +22,7 @@ logger = logging.getLogger(__name__)
 
 class TTSPreviewWorker(QThread):
     step = Signal(int, int)       # progress value, max
+    started_work = Signal()       # render lock acquired -> generating now (not queued)
     finished_ok = Signal(str)     # audio path
     failed = Signal(str)          # error message
 
@@ -37,17 +38,19 @@ class TTSPreviewWorker(QThread):
 
     def run(self) -> None:  # noqa: D102
         try:
-            ollama_service.unload()                # free VRAM for the TTS model
-            comfy_launcher.ensure_stage("tts")     # lean ComfyUI: tts_audio_suite
-            engine = registry.get_engine()
-            stem = self._voice.voice_id if self._voice else "default"
-            out = self._out or (Path(CONFIG.tts.library_dir) / "previews" / f"{stem}.mp3")
-            # emotion-varied, already Higgs-tagged -> delivery=None (pass-through)
-            engine.synthesize(
-                TTSRequest(text=preview.build_emotional_preview(),
-                           voice=self._voice, delivery=None, out_path=out),
-                on_step=lambda v, m: self.step.emit(v, m),
-            )
+            with comfy_launcher.RENDER_LOCK:           # one render at a time (queue)
+                self.started_work.emit()
+                ollama_service.unload()                # free VRAM for the TTS model
+                comfy_launcher.ensure_stage("tts")     # lean ComfyUI: tts_audio_suite
+                engine = registry.get_engine()
+                stem = self._voice.voice_id if self._voice else "default"
+                out = self._out or (Path(CONFIG.tts.library_dir) / "previews" / f"{stem}.mp3")
+                # emotion-varied, already Higgs-tagged -> delivery=None (pass-through)
+                engine.synthesize(
+                    TTSRequest(text=preview.build_emotional_preview(),
+                               voice=self._voice, delivery=None, out_path=out),
+                    on_step=lambda v, m: self.step.emit(v, m),
+                )
             self.finished_ok.emit(str(out))
         except Exception as err:  # noqa: BLE001
             logger.exception("TTS preview failed")

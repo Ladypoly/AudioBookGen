@@ -27,11 +27,13 @@ class RenderAllWorker(QThread):
     failed = Signal(str)
 
     def __init__(self, infos: list[dict], characters: list[Character],
-                 force: bool = False, parent: QObject | None = None) -> None:
+                 force: bool = False, redo_voices_no_narrator: bool = False,
+                 parent: QObject | None = None) -> None:
         super().__init__(parent)
         self._infos = infos
         self._chars = characters
         self._force = force
+        self._redo_no_narrator = redo_voices_no_narrator
         self._cancelled = False
 
     def cancel(self) -> None:
@@ -73,6 +75,11 @@ class RenderAllWorker(QThread):
             self.chapter_progress.emit(done, total, f"{ch.chapter_id}: {ch.title}{eta}")
             self.chapter_started.emit(ch.chapter_id)
             try:
+                if self._redo_no_narrator:   # re-render only character (non-narrator) lines
+                    out_dir = proj.line_audio_dir / ch.chapter_id
+                    for ln in ch.lines:
+                        if ln.speaker_id != line_planner.NARRATOR_ID:
+                            (out_dir / f"{ln.line_id}.mp3").unlink(missing_ok=True)
                 chapter_render.render_lines(
                     ch, self._chars,
                     progress=lambda d, t, _n: self.line_progress.emit(d, t),

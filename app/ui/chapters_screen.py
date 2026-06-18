@@ -61,18 +61,20 @@ def _delivery_html(delivery) -> str:
 # 'Produce chapters' bulk dialog).
 _REDO_MODES = {
     "full": dict(redo_voices=True, redo_ambience=True, redo_sfx=True),
+    "continue": dict(),                      # generate only what's missing
     "voices": dict(redo_voices=True),
     "voices_chars": dict(redo_voices_no_narrator=True),
     "ambience": dict(redo_ambience=True),
     "sfx": dict(redo_sfx=True),
-    "mix": dict(),
+    "mix": dict(mix_only=True),              # just re-assemble, no generation
 }
-_MODE_ORDER = [("full", "Full (voices + SFX + ambience)"),
-               ("voices", "Voices only (all)"),
+_MODE_ORDER = [("full", "Full — regenerate everything (overwrite)"),
+               ("continue", "Continue — generate only what's missing"),
+               ("voices", "Voices only (regenerate all)"),
                ("voices_chars", "Character voices only (no narrator)"),
                ("ambience", "Ambience only"),
                ("sfx", "SFX only"),
-               ("mix", "Mix only (fast)")]
+               ("mix", "Mix only (just re-assemble)")]
 
 
 def _ask_render_mode(parent, title: str, text: str):
@@ -443,6 +445,7 @@ class ChaptersScreen(QWidget):
         self._scene_force = mode in ("full", "ambience", "sfx")
         self._render_force = mode in ("full", "voices")
         self._render_no_narr = mode == "voices_chars"
+        self._mix_only = mode == "mix"
         self._qc = (0, 0)
         self.produce_btn.setEnabled(False)
         self.cancel_btn.setVisible(True)
@@ -451,6 +454,8 @@ class ChaptersScreen(QWidget):
     def _produce_scene(self) -> None:
         if self._produce_cancelled:
             return self._on_produce_done()
+        if self._mix_only:                  # no generation — straight to re-mix
+            return self._produce_render()
         proj = project_service.active()
         need = self._scene_force or any(
             not proj.ambience_path(i["chapter_id"]).exists()
@@ -474,7 +479,8 @@ class ChaptersScreen(QWidget):
         self.overall_bar.setValue(0)
         w = RenderAllWorker(self._produce_index, self.characters,
                             force=self._render_force,
-                            redo_voices_no_narrator=self._render_no_narr, parent=self)
+                            redo_voices_no_narrator=self._render_no_narr,
+                            mix_only=self._mix_only, parent=self)
         self._active_batch = w
         w.chapter_progress.connect(self._on_overall_progress)
         w.chapter_started.connect(self._on_chapter_started)

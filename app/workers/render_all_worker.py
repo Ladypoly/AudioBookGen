@@ -28,12 +28,13 @@ class RenderAllWorker(QThread):
 
     def __init__(self, infos: list[dict], characters: list[Character],
                  force: bool = False, redo_voices_no_narrator: bool = False,
-                 parent: QObject | None = None) -> None:
+                 mix_only: bool = False, parent: QObject | None = None) -> None:
         super().__init__(parent)
         self._infos = infos
         self._chars = characters
         self._force = force
         self._redo_no_narrator = redo_voices_no_narrator
+        self._mix_only = mix_only
         self._cancelled = False
 
     def cancel(self) -> None:
@@ -75,17 +76,23 @@ class RenderAllWorker(QThread):
             self.chapter_progress.emit(done, total, f"{ch.chapter_id}: {ch.title}{eta}")
             self.chapter_started.emit(ch.chapter_id)
             try:
-                if self._redo_no_narrator:   # re-render only character (non-narrator) lines
-                    out_dir = proj.line_audio_dir / ch.chapter_id
+                out_dir = proj.line_audio_dir / ch.chapter_id
+                if self._mix_only:           # no generation — re-assemble existing
                     for ln in ch.lines:
-                        if ln.speaker_id != line_planner.NARRATOR_ID:
-                            (out_dir / f"{ln.line_id}.mp3").unlink(missing_ok=True)
-                chapter_render.render_lines(
-                    ch, self._chars,
-                    progress=lambda d, t, _n: self.line_progress.emit(d, t),
-                    is_cancelled=lambda: self._cancelled,
-                    urls=urls, force=self._force,
-                )
+                        clip = out_dir / f"{ln.line_id}.mp3"
+                        if clip.exists():
+                            ln.audio_path = str(clip)
+                else:
+                    if self._redo_no_narrator:   # re-render only non-narrator lines
+                        for ln in ch.lines:
+                            if ln.speaker_id != line_planner.NARRATOR_ID:
+                                (out_dir / f"{ln.line_id}.mp3").unlink(missing_ok=True)
+                    chapter_render.render_lines(
+                        ch, self._chars,
+                        progress=lambda d, t, _n: self.line_progress.emit(d, t),
+                        is_cancelled=lambda: self._cancelled,
+                        urls=urls, force=self._force,
+                    )
                 missing = sum(1 for l in ch.lines
                               if not (l.audio_path and Path(l.audio_path).exists()))
                 if missing:

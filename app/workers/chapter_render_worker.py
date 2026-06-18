@@ -25,6 +25,7 @@ class ChapterRenderWorker(QThread):
                  force: bool = False, test: bool = False,
                  redo_voices: bool = False, redo_ambience: bool = False,
                  redo_sfx: bool = False, redo_voices_no_narrator: bool = False,
+                 mix_only: bool = False,
                  parent: QObject | None = None) -> None:
         super().__init__(parent)
         self._chapter = chapter
@@ -35,6 +36,7 @@ class ChapterRenderWorker(QThread):
         self._redo_ambience = redo_ambience
         self._redo_sfx = redo_sfx
         self._redo_voices_no_narrator = redo_voices_no_narrator
+        self._mix_only = mix_only
         self._cancelled = False
 
     def cancel(self) -> None:
@@ -56,6 +58,19 @@ class ChapterRenderWorker(QThread):
             # voices re-render when forced (test, full, or "voices only")
             force = self._force or self._test or self._redo_voices
             proj0 = ps.active()
+
+            # Mix only: no generation at all — point lines at existing clips and
+            # re-assemble (fast; e.g. after tweaking pauses/levels).
+            if self._mix_only and proj0 is not None:
+                out_dir = proj0.line_audio_dir / ch.chapter_id
+                for ln in ch.lines:
+                    clip = out_dir / f"{ln.line_id}.mp3"
+                    if clip.exists():
+                        ln.audio_path = str(clip)
+                path = chapter_render.assemble(ch)
+                chapter_service.save_chapter(proj0, ch)
+                self.finished_ok.emit(ch.chapter_id, path or "")
+                return
 
             # A chapter render is self-contained: generate its scene audio
             # (ambience bed + discrete SFX) if missing OR explicitly re-requested.

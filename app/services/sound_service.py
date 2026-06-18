@@ -7,6 +7,7 @@ AudioSparx convention (a TrackType tag + a dense description + a Length hint).
 from __future__ import annotations
 
 import logging
+import random
 from pathlib import Path
 
 from app.core.config import CONFIG
@@ -26,10 +27,14 @@ _NEGATIVE = "low quality, distorted, clipping, harsh noise"
 
 def generate(
     prompt: str, seconds: float, out_path: Path,
-    kind: str = "sfx", seed: int = 7, negative: str = _NEGATIVE,
+    kind: str = "sfx", seed: int | None = None, negative: str = _NEGATIVE,
 ) -> Path:
-    """Render one audio clip from a Stable Audio prompt to out_path (mp3)."""
+    """Render one audio clip from a Stable Audio prompt to out_path (mp3).
+
+    A random seed each call, so re-generating ambience/SFX yields a fresh take."""
     seconds = max(1.0, round(float(seconds), 2))
+    if seed is None:
+        seed = random.randint(0, 2**31 - 1)
     text = f"{_TAG.get(kind, '')}{prompt.strip()} Length: {int(seconds)} seconds."
     comfy_service.run_workflow(
         CONFIG.comfy.audio_workflow,

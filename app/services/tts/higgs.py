@@ -6,8 +6,8 @@ reference audio available to ComfyUI, fills the Higgs workflow, and renders.
 
 from __future__ import annotations
 
-import hashlib
 import logging
+import random
 import shutil
 from pathlib import Path
 
@@ -32,7 +32,7 @@ class HiggsTTSEngine:
             "{tts_text}": text,
             "{reference_audio}": ref_name,
             "{filename_prefix}": f"b2ad/{out.stem}",
-            "{seed}": request.seed or self._seed(request.text),
+            "{seed}": request.seed or random.randint(0, 2**31 - 1),
         }
         comfy_service.run_workflow(
             CONFIG.comfy.tts_workflow, replacements, out, on_step=on_step,
@@ -65,7 +65,3 @@ class HiggsTTSEngine:
             from pydub import AudioSegment
             AudioSegment.from_file(src).export(dst, format="wav")
         return ref_name
-
-    @staticmethod
-    def _seed(text: str) -> int:
-        return int(hashlib.sha256(text.encode()).hexdigest(), 16) % (2**31)

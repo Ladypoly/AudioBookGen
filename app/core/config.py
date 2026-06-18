@@ -125,7 +125,9 @@ class ComfyConfig:
             # Z-Image portraits: core-only (resolution hardcoded in the graph).
             "image": ComfyStage(whitelist=()),
             "audio": ComfyStage(whitelist=()),   # Stable Audio 3: core only
-            "tts": ComfyStage(whitelist=("tts_audio_suite",), sage_attention=True),
+            # NB: sage-attention can degrade Higgs cloning (wrong/female voice vs
+            # a plain manual run), so the TTS stage runs with normal attention.
+            "tts": ComfyStage(whitelist=("tts_audio_suite",), sage_attention=False),
         }
     )
 

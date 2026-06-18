@@ -25,27 +25,6 @@ logger = logging.getLogger(__name__)
 _REF_CACHE: dict = {}
 _REF_LOCK = threading.Lock()
 
-# Target median-pitch range (Hz) per (gender, age). The reference is nudged into
-# this band before cloning so Qwen's unstable pitch can't make a man sound like
-# a woman (or a bass too deep for Higgs to clone). Male lows stay >= the ~105 Hz
-# clonable floor. Unknown/ambiguous gender -> no clamp (just the floor).
-_PITCH_RANGES = {
-    ("male", "child"): (200, 300),
-    ("male", "teen"): (120, 185),
-    ("male", "young_adult"): (108, 150),
-    ("male", "adult"): (108, 150),
-    ("male", "elderly"): (112, 165),
-    ("female", "child"): (220, 320),
-    ("female", "teen"): (190, 285),
-    ("female", "young_adult"): (172, 262),
-    ("female", "adult"): (165, 255),
-    ("female", "elderly"): (160, 245),
-}
-
-
-def _pitch_range(gender: str, age: str):
-    return _PITCH_RANGES.get((gender, age)) or _PITCH_RANGES.get((gender, "adult"))
-
 
 class HiggsTTSEngine:
     name = "higgs_v3"
@@ -110,9 +89,10 @@ class HiggsTTSEngine:
         return ref_name
 
     def _normalize_pitch(self, dst: Path, voice) -> None:
-        """Nudge the reference's median pitch into the band expected for this
-        voice's gender/age (and never below Higgs' clonable floor), so cloning
-        keeps the right voice instead of drifting up into a female sound."""
+        """ONLY rescue a reference too deep for Higgs to clone (< ~105 Hz, where
+        it drifts up into a female voice). Everything else is left exactly as-is
+        — pitch-shifting also moves formants and degrades the voice, so we never
+        touch a reference Higgs can already clone faithfully."""
         try:
             import math
 
@@ -125,27 +105,12 @@ class HiggsTTSEngine:
             if f0.size == 0:
                 return
             med = float(np.median(f0))
-            if med <= 0:
+            if not (0 < med < self._PITCH_FLOOR_HZ):   # clonable as-is → leave it
                 return
-            rng = _pitch_range(getattr(voice, "gender", "unknown"),
-                               getattr(voice, "age", "unknown"))
-            if rng:
-                low = max(rng[0], self._PITCH_FLOOR_HZ)
-                high = rng[1]
-                if med < low:
-                    target = low * 1.05
-                elif med > high:
-                    target = high * 0.96
-                else:
-                    return
-            elif med < self._PITCH_FLOOR_HZ:           # no range: just rescue too-deep
-                target = self._PITCH_TARGET_HZ
-            else:
-                return
-            steps = max(-7.0, min(7.0, 12.0 * math.log2(target / med)))
+            steps = 12.0 * math.log2(self._PITCH_TARGET_HZ / med)
             shifted = librosa.effects.pitch_shift(y, sr=sr, n_steps=steps)
             sf.write(str(dst), shifted, sr)
-            logger.info("Pitch-normalised reference %.0fHz -> ~%.0fHz (%+.1f st)",
-                        med, target, steps)
+            logger.info("Lifted too-deep reference %.0fHz -> ~%.0fHz (+%.1f st)",
+                        med, self._PITCH_TARGET_HZ, steps)
         except Exception:  # noqa: BLE001
-            logger.warning("pitch normalise skipped", exc_info=True)
+            logger.warning("pitch lift skipped", exc_info=True)

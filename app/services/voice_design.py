@@ -61,7 +61,10 @@ def build_voice_description(char: Character) -> str:
         kid = "boy" if g == "male" else "girl"
         lead = (f"A {'MALE' if g == 'male' else 'FEMALE'} young person — a {kid}'s voice")
     elif g == "male":
-        lead = "A MALE voice — a man, distinctly masculine, low and chest-resonant in pitch"
+        # Clearly male, but a NORMAL male pitch — an extreme deep bass (~90 Hz)
+        # can't be cloned by Higgs and drifts up into a female-sounding voice.
+        lead = ("A MALE voice — a man, clearly masculine with a natural adult "
+                "male pitch (a normal baritone, NOT an extreme deep bass)")
     elif g == "female":
         lead = "A FEMALE voice — a woman, distinctly feminine, higher in pitch"
     else:

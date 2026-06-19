@@ -49,24 +49,11 @@ def export_audiobook(project, dest_root: str | Path, on_step=None) -> Path:
         num = int(info.get("number", n))
         dst = out_dir / f"{num:02d} - {_safe(info['title'])}.mp3"
         shutil.copy2(src, dst)
-        book_meta.tag_chapter_mp3(dst, project, num, info["title"])
-        if cover_bytes:
-            _embed_cover(dst, cover_bytes)
+        ch = chapter_service.load_chapter(project, info["chapter_id"])
+        # tag_chapter_mp3 writes tags + lyrics + embedded cover per CONFIG.export
+        book_meta.tag_chapter_mp3(dst, project, num, info["title"],
+                                  lyrics=ch.text if ch else "")
         if on_step:
             on_step(n)
     logger.info("Exported %d chapters to %s", n, out_dir)
     return out_dir
-
-
-def _embed_cover(mp3_path: Path, png_bytes: bytes) -> None:
-    try:
-        from mutagen.id3 import APIC, ID3, ID3NoHeaderError
-        try:
-            tags = ID3(str(mp3_path))
-        except ID3NoHeaderError:
-            tags = ID3()
-        tags.delall("APIC")
-        tags.add(APIC(encoding=3, mime="image/png", type=3, desc="Cover", data=png_bytes))
-        tags.save(str(mp3_path))
-    except Exception:  # noqa: BLE001
-        logger.debug("cover embed failed for %s", mp3_path, exc_info=True)

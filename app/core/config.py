@@ -232,11 +232,29 @@ class TTSConfig:
 
 
 @dataclass
+class ExportConfig:
+    """What to write into each chapter MP3's ID3 tags / metadata."""
+
+    tag_title: bool = True            # "N. Chapter title"
+    tag_album: bool = True            # book title
+    tag_artist: bool = True           # author
+    tag_albumartist: bool = True      # author (album artist)
+    tag_track: bool = True            # track number
+    tag_genre: bool = True
+    genre: str = "Audiobook"
+    tag_comment: bool = False
+    comment: str = ""
+    tag_lyrics: bool = True           # full chapter prose as USLT lyrics
+    embed_cover: bool = True          # embed cover.png into every chapter MP3
+
+
+@dataclass
 class AppConfig:
     ollama: OllamaConfig = field(default_factory=OllamaConfig)
     extraction: ExtractionConfig = field(default_factory=ExtractionConfig)
     comfy: ComfyConfig = field(default_factory=ComfyConfig)
     tts: TTSConfig = field(default_factory=TTSConfig)
+    export: ExportConfig = field(default_factory=ExportConfig)
     portrait_style: PortraitStyle = field(default_factory=PortraitStyle)
     prompts_dir: Path = PROMPTS_DIR
     workflows_dir: Path = PROJECT_ROOT / "workflows"

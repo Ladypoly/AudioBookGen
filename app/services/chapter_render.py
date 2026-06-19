@@ -245,7 +245,8 @@ def assemble(chapter: Chapter, suffix: str = "") -> str | None:
         _master(out, CONFIG.tts.master_lufs, CONFIG.tts.master_tp)
     if not suffix:                       # tag the real chapter file (not _test)
         try:
-            book_meta.tag_chapter_mp3(out, proj, chapter.number, chapter.title)
+            book_meta.tag_chapter_mp3(out, proj, chapter.number, chapter.title,
+                                      lyrics=chapter.text)
         except Exception:  # noqa: BLE001
             logger.exception("Tagging failed for %s", chapter.chapter_id)
     chapter.audio_path = str(out)

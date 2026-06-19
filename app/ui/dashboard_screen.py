@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QPixmap
 from PySide6.QtWidgets import (
@@ -20,13 +22,15 @@ from app.ui.flow_layout import FlowLayout
 
 
 class ProjectCard(QFrame):
-    opened = Signal(str)  # source_pdf
+    opened = Signal(str)         # source_pdf
+    cover_changed = Signal()     # user set a custom cover -> refresh dashboard
 
     def __init__(self, info: dict, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.setObjectName("Card")
         self.setFixedWidth(280)
         self._pdf = info.get("source_pdf", "")
+        self._root = info.get("root", "")
 
         lay = QVBoxLayout(self)
         lay.setContentsMargins(16, 14, 16, 14)
@@ -52,10 +56,30 @@ class ProjectCard(QFrame):
         meta = QLabel(f"{info['character_count']} characters")
         meta.setObjectName("Subtle")
         lay.addWidget(meta)
+        row = QHBoxLayout()
         btn = QPushButton("Open")
         btn.setObjectName("Primary")
         btn.clicked.connect(lambda: self.opened.emit(self._pdf))
-        lay.addWidget(btn)
+        row.addWidget(btn, stretch=1)
+        cover_btn = QPushButton("Cover…")
+        cover_btn.setToolTip("Set a custom cover image for this book")
+        cover_btn.clicked.connect(self._set_cover)
+        row.addWidget(cover_btn)
+        lay.addLayout(row)
+
+    def _set_cover(self) -> None:
+        if not self._root:
+            return
+        path, _ = QFileDialog.getOpenFileName(
+            self, "Choose cover image", "",
+            "Images (*.png *.jpg *.jpeg *.webp *.bmp)")
+        if not path:
+            return
+        pix = QPixmap(path)
+        if pix.isNull():
+            return
+        pix.save(str(Path(self._root) / "cover.png"), "PNG")   # normalise to PNG
+        self.cover_changed.emit()
 
 
 class DashboardScreen(QWidget):
@@ -110,6 +134,7 @@ class DashboardScreen(QWidget):
         for info in projects:
             card = ProjectCard(info)
             card.opened.connect(self.open_project.emit)
+            card.cover_changed.connect(self.refresh)
             self.flow.addWidget(card)
 
     def _new(self) -> None:

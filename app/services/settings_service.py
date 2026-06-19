@@ -63,6 +63,18 @@ FIELDS: list[tuple] = [
     ("Export", "MP3 bitrate", "tts.mp3_bitrate", "choice",
      ["96k", "128k", "160k", "192k", "256k", "320k"]),
 
+    ("MP3 tags", "Title (N. chapter)", "export.tag_title", "bool", None),
+    ("MP3 tags", "Album (book title)", "export.tag_album", "bool", None),
+    ("MP3 tags", "Artist (author)", "export.tag_artist", "bool", None),
+    ("MP3 tags", "Album artist", "export.tag_albumartist", "bool", None),
+    ("MP3 tags", "Track number", "export.tag_track", "bool", None),
+    ("MP3 tags", "Genre", "export.tag_genre", "bool", None),
+    ("MP3 tags", "Genre value", "export.genre", "str", None),
+    ("MP3 tags", "Comment", "export.tag_comment", "bool", None),
+    ("MP3 tags", "Comment value", "export.comment", "str", None),
+    ("MP3 tags", "Chapter text as lyrics", "export.tag_lyrics", "bool", None),
+    ("MP3 tags", "Embed cover image", "export.embed_cover", "bool", None),
+
     ("Extraction", "Web search (bio/afterword/enrich)", "extraction.web_search", "bool", None),
     ("Extraction", "Front matter (Vorwort)", "extraction.front_matter", "bool", None),
     ("Extraction", "Afterword (Nachwort)", "extraction.afterword", "bool", None),

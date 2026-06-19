@@ -42,20 +42,14 @@ class RenderAllWorker(QThread):
 
     def run(self) -> None:  # noqa: D102
         ollama_service.unload()
-        try:
-            urls = comfy_launcher.ensure_pool("tts")
-        except comfy_launcher.LauncherError as err:
-            self.failed.emit(f"ComfyUI launch failed: {err}")
-            self.finished_all.emit()
-            return
-
         proj = project_service.active()
         if proj is None:
             self.failed.emit("No active project")
             self.finished_all.emit()
             return
 
-        total = len(self._infos)
+        urls = None                          # ComfyUI pool launched lazily, on
+        total = len(self._infos)             # the first chapter that needs it
         start = time.monotonic()
         fail_lines = 0
         fail_chapters = 0
@@ -77,6 +71,18 @@ class RenderAllWorker(QThread):
             self.chapter_started.emit(ch.chapter_id)
             try:
                 out_dir = proj.line_audio_dir / ch.chapter_id
+                final = proj.chapter_audio_dir / f"{ch.chapter_id}.mp3"
+
+                # Continue (no force / no narrator-redo): a chapter that already
+                # has its final mix AND every line clip is DONE — skip it whole,
+                # don't waste time re-assembling existing chapters.
+                if (not self._mix_only and not self._force
+                        and not self._redo_no_narrator and final.exists()
+                        and ch.lines and all(
+                            (out_dir / f"{l.line_id}.mp3").exists() for l in ch.lines)):
+                    self.chapter_done.emit(ch.chapter_id, str(final))
+                    continue
+
                 if self._mix_only:           # no generation — re-assemble existing
                     for ln in ch.lines:
                         clip = out_dir / f"{ln.line_id}.mp3"
@@ -87,6 +93,13 @@ class RenderAllWorker(QThread):
                         for ln in ch.lines:
                             if ln.speaker_id != line_planner.NARRATOR_ID:
                                 (out_dir / f"{ln.line_id}.mp3").unlink(missing_ok=True)
+                    if urls is None:         # first chapter that actually renders
+                        try:
+                            urls = comfy_launcher.ensure_pool("tts")
+                        except comfy_launcher.LauncherError as err:
+                            self.failed.emit(f"ComfyUI launch failed: {err}")
+                            self.finished_all.emit()
+                            return
                     chapter_render.render_lines(
                         ch, self._chars,
                         progress=lambda d, t, _n: self.line_progress.emit(d, t),

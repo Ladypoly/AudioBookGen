@@ -7,10 +7,11 @@ from pathlib import Path
 
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
+    QComboBox,
+    QFileDialog,
     QFrame,
     QHBoxLayout,
     QLabel,
-    QMessageBox,
     QProgressBar,
     QPushButton,
     QScrollArea,
@@ -21,6 +22,7 @@ from PySide6.QtWidgets import (
 from app.services import chapter_service, pdf_service, project_service
 from app.ui.audio_util import play_audio
 from app.workers.ambience_worker import AmbienceWorker
+from app.workers.audiobook_export_worker import AudiobookExportWorker
 from app.workers.chapter_render_worker import ChapterRenderWorker
 from app.workers.render_all_worker import RenderAllWorker
 
@@ -75,18 +77,6 @@ _MODE_ORDER = [("full", "Full — regenerate everything (overwrite)"),
                ("ambience", "Ambience only"),
                ("sfx", "SFX only"),
                ("mix", "Mix only (just re-assemble)")]
-
-
-def _ask_render_mode(parent, title: str, text: str):
-    box = QMessageBox(parent)
-    box.setWindowTitle(title)
-    box.setText(text)
-    btns = {key: box.addButton(label, QMessageBox.ButtonRole.AcceptRole)
-            for key, label in _MODE_ORDER}
-    box.addButton("Cancel", QMessageBox.ButtonRole.RejectRole)
-    box.exec()
-    clicked = box.clickedButton()
-    return next((k for k, b in btns.items() if b is clicked), None)
 
 
 class ChapterRow(QFrame):
@@ -225,19 +215,15 @@ class ChapterRow(QFrame):
             self.play_btn.setEnabled(False)
 
     def _render(self) -> None:
-        """Button click: pick a mode if already rendered, then queue the job so
-        clicking Render on several chapters runs them one at a time."""
+        """Button click: use the screen's mode panel (or just generate if this
+        chapter isn't rendered yet), then queue the job so clicking Render on
+        several chapters runs them one at a time."""
         if project_service.active() is None:
             return
-        flags: dict = {}
-        if self._rendered_file() is not None:
-            mode = _ask_render_mode(
-                self, "Re-render chapter",
-                f"'{self._info['number']}. {self._info['title']}' is already "
-                "rendered.\nWhat do you want to redo?")
-            if mode is None:                 # cancel
-                return
-            flags = _REDO_MODES[mode]
+        # a not-yet-rendered chapter is always just generated ('continue');
+        # a rendered one obeys the selected re-render mode.
+        mode = self._screen.current_mode() if self._rendered_file() is not None else "continue"
+        flags = _REDO_MODES.get(mode, {})
         self.render_btn.setEnabled(False)
         self.status.setText("queued…")
         self.status.setStyleSheet("color: #f4db7d;")
@@ -324,15 +310,36 @@ class ChaptersScreen(QWidget):
         bar = QHBoxLayout()
         self.detect_btn = QPushButton("Detect chapters")
         self.detect_btn.clicked.connect(self._detect)
+        bar.addWidget(self.detect_btn)
+
+        # re-render mode panel — applies to 'Produce chapters' AND a chapter's
+        # own Render button (a readable dropdown instead of a cramped popup).
+        bar.addWidget(QLabel("Mode:"))
+        self.mode_combo = QComboBox()
+        for key, label in _MODE_ORDER:
+            self.mode_combo.addItem(label, key)
+        self.mode_combo.setCurrentIndex(
+            [k for k, _ in _MODE_ORDER].index("continue"))
+        self.mode_combo.setToolTip(
+            "What 'Produce chapters' and a chapter's Render button (re)do")
+        bar.addWidget(self.mode_combo)
+
         self.produce_btn = QPushButton("Produce chapters")
-        self.produce_btn.setToolTip("Everything: music + ambience + SFX, then render every chapter to a tagged MP3 (voices must be done on the Characters tab)")
+        self.produce_btn.setToolTip("Run the selected mode over every chapter")
         self.produce_btn.clicked.connect(self._produce_all)
+        bar.addWidget(self.produce_btn)
+
+        self.export_btn = QPushButton("Export audiobook")
+        self.export_btn.setObjectName("Primary")
+        self.export_btn.setEnabled(False)
+        self.export_btn.setToolTip("Available once every chapter is rendered")
+        self.export_btn.clicked.connect(self._export)
+        bar.addWidget(self.export_btn)
+
         self.cancel_btn = QPushButton("Cancel")
         self.cancel_btn.setObjectName("Ghost")
         self.cancel_btn.setVisible(False)
         self.cancel_btn.clicked.connect(self._cancel_batch)
-        bar.addWidget(self.detect_btn)
-        bar.addWidget(self.produce_btn)
         bar.addWidget(self.cancel_btn)
         self.toolbar_status = QLabel("")
         self.toolbar_status.setObjectName("Subtle")
@@ -383,6 +390,45 @@ class ChaptersScreen(QWidget):
             row = ChapterRow(info, self)
             self._rows[info["chapter_id"]] = row
             self.vbox.addWidget(row)
+        self._update_export_btn()
+
+    # --- mode panel + export -------------------------------------------------
+    def current_mode(self) -> str:
+        return self.mode_combo.currentData() or "continue"
+
+    def _update_export_btn(self) -> None:
+        proj = project_service.active()
+        index = chapter_service.load_index(proj) if proj is not None else []
+        all_done = bool(index) and all(
+            (proj.chapter_audio_dir / f"{i['chapter_id']}.mp3").exists() for i in index)
+        self.export_btn.setEnabled(all_done)
+
+    def _export(self) -> None:
+        proj = project_service.active()
+        if proj is None:
+            return
+        folder = QFileDialog.getExistingDirectory(self, "Choose export folder")
+        if not folder:
+            return
+        self.export_btn.setEnabled(False)
+        self.toolbar_status.setText("Exporting audiobook…")
+        self._export_worker = AudiobookExportWorker(folder, self)
+        self._export_worker.progress.connect(
+            lambda n: self.toolbar_status.setText(f"Exporting… {n} chapters"))
+        self._export_worker.finished_ok.connect(self._on_exported)
+        self._export_worker.failed.connect(
+            lambda m: (self.export_btn.setEnabled(True),
+                       self.toolbar_status.setText(f"Export failed: {m}")))
+        self._export_worker.start()
+
+    def _on_exported(self, out: str) -> None:
+        self.export_btn.setEnabled(True)
+        self.toolbar_status.setText(f"Exported to {out}")
+        try:                                # reveal the folder in Explorer
+            import os
+            os.startfile(out)  # type: ignore[attr-defined]
+        except Exception:  # noqa: BLE001
+            pass
 
     # --- manual per-chapter render queue -------------------------------------
     def enqueue_render(self, row: "ChapterRow", flags: dict) -> None:
@@ -413,6 +459,7 @@ class ChaptersScreen(QWidget):
             except (RuntimeError, TypeError):
                 pass
         self._render_active = None
+        self._update_export_btn()
         self._pump_render_queue()
 
     # --- audiobook pipeline: scene audio -> render all -----------------------
@@ -432,12 +479,7 @@ class ChaptersScreen(QWidget):
             self.toolbar_status.setText(
                 "No voices yet — run 'Generate all voices' on the Characters tab first.")
             return
-        mode = _ask_render_mode(
-            self, "Produce chapters",
-            "(Re)produce ALL chapters — what to do?\n(e.g. 'Character voices only' "
-            "if you just changed a speaker, 'Mix only' to re-mix.)")
-        if mode is None:
-            return
+        mode = self.current_mode()          # from the top mode panel
         self._produce_index = index
         self._producing = True
         self._produce_cancelled = False
@@ -517,6 +559,7 @@ class ChaptersScreen(QWidget):
         self.cancel_btn.setVisible(False)
         self.overall_bar.setVisible(False)
         self.produce_btn.setEnabled(True)
+        self._update_export_btn()
         if getattr(self, "_produce_cancelled", False):
             self.toolbar_status.setText("Production cancelled.")
         else:

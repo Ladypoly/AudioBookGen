@@ -42,6 +42,13 @@ class OllamaConfig:
     repeat_last_n: int = 256
     # Context window: must hold prompt + structured JSON output. Ollama's
     # default (often 4096) truncates the JSON mid-string on large chunks.
+    # When auto_ctx is on, the model's real max context (from /api/show) is
+    # used instead, clamped to ctx_cap. NOTE: a bigger window is NOT free —
+    # Ollama allocates the whole KV cache up front, so every call gets slower
+    # (and too large spills to CPU). Extraction works on small chunks, so the
+    # default cap stays modest; raise it only if you actually need long context.
+    auto_ctx: bool = True
+    ctx_cap: int = 16384
     num_ctx: int = 16384
     # Max output tokens. Ollama's default cap (128) truncates the JSON early,
     # producing an "unterminated string". Allow room for many characters.
@@ -70,6 +77,10 @@ class ExtractionConfig:
     # Narrator intro / closing chapters.
     front_matter: bool = True
     afterword: bool = True
+    # Split a character that appears at clearly different life stages into one
+    # character per age (so each gets an age-appropriate voice). Off by default:
+    # the local model's per-mention age guess is noisy and over-splits.
+    split_age_voices: bool = False
 
 
 @dataclass
@@ -191,6 +202,9 @@ class TTSConfig:
     mp3_bitrate: str = "192k"                # chapter export bitrate
     ambience_enabled: bool = True            # generate + mix ambience beds
     sfx_enabled: bool = True                 # generate + mix discrete SFX
+    # How densely discrete SFX are placed: off | sparse | normal | rich. Caps
+    # how many cues are attached per line and per chapter (see sfx_planner).
+    sfx_density: str = "normal"
     # Ambience bed level under the dialogue (dB, negative = quieter). A radio
     # drama wants the bed clearly present, not just barely-there room tone.
     ambience_gain_db: float = -15.0

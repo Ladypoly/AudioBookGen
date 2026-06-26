@@ -298,6 +298,226 @@ def assign_roles(chars: list[RegistryCharacter]) -> list[Character]:
     return final
 
 
+# --- age-stage splitting -----------------------------------------------------
+# A character seen at clearly different life stages (a child in a flashback, an
+# adult in the present) should become SEPARATE characters so each gets its own
+# age-appropriate voice. young_adult/adult collapse to one "adult" voice age so
+# ordinary age drift does not spuriously split anyone.
+
+_VOICE_AGE = {
+    "child": "child", "teen": "teen",
+    "young_adult": "adult", "adult": "adult",
+    "elderly": "elderly", "unknown": "adult",
+}
+_AGE_ORDER = {"child": 0, "teen": 1, "adult": 2, "elderly": 3}
+_AGE_LABEL_DE = {"child": "Kind", "teen": "jugendlich",
+                 "adult": "erwachsen", "elderly": "alt"}
+
+
+def _voice_age(band: str) -> str:
+    return _VOICE_AGE.get(band, "adult")
+
+
+def _base_name(display_name: str) -> str:
+    """Strip a trailing "(label)" age suffix to recover the original name."""
+    return re.sub(r"\s*\([^)]*\)\s*$", "", display_name).strip()
+
+
+def _age_clusters(mentions: list[CharacterMention]) -> dict[str, dict]:
+    """Bucket a character's mentions by coarse voice-age -> {mentions, spoken,
+    band (the most representative real AgeBand in the bucket)}."""
+    buckets: dict[str, dict] = {}
+    votes: dict[str, Counter] = {}
+    for m in mentions:
+        va = _voice_age(m.age_band.value)
+        b = buckets.setdefault(va, {"mentions": 0, "spoken": 0})
+        b["mentions"] += m.mention_count
+        b["spoken"] += m.spoken_lines
+        votes.setdefault(va, Counter())[m.age_band.value] += m.mention_count
+    for va, b in buckets.items():
+        b["band"] = votes[va].most_common(1)[0][0]
+    return buckets
+
+
+def split_age_variants(
+    merged: list[RegistryCharacter], raw_mentions: list[CharacterMention]
+) -> list[RegistryCharacter]:
+    """Expand any character that appears at 2+ well-supported voice-ages into one
+    character per age stage (display name suffixed, e.g. "Anna (Kind)")."""
+    out: list[RegistryCharacter] = []
+    for c in merged:
+        names = _name_tokens(c.display_name) | {
+            t for a in c.aliases for t in _name_tokens(a)}
+        mine = [m for m in raw_mentions if _name_tokens(m.surface_name) & names]
+        clusters = _age_clusters(mine)
+        total = sum(b["mentions"] for b in clusters.values()) or c.total_mentions
+        # Require real support so a single mis-aged chapter cannot split a cast
+        # member: >= 3 mentions AND >= 15 % of this character's mentions.
+        strong = {va: b for va, b in clusters.items()
+                  if b["mentions"] >= max(8, 0.30 * total)}
+        if len(strong) < 2:
+            out.append(c)
+            continue
+        # Keep only the two strongest age stages — avoid a 3-4-way split on noise.
+        strong = dict(sorted(strong.items(), key=lambda kv: -kv[1]["mentions"])[:2])
+        base = _base_name(c.display_name)
+        for va in sorted(strong, key=lambda k: _AGE_ORDER.get(k, 9)):
+            b = strong[va]
+            v = c.model_copy(deep=True)
+            v.display_name = f"{base} ({_AGE_LABEL_DE.get(va, va)})"
+            v.aliases = sorted(set(c.aliases) | {base})
+            v.age_band = AgeBand(b["band"])
+            v.total_mentions = b["mentions"]
+            v.spoken_lines = b["spoken"]
+            v.needs_review = True
+            out.append(v)
+        logger.info("Split %s into age variants: %s", base, sorted(strong))
+    return out
+
+
+def resolve_for_chapter(
+    characters: list[Character], chapter_mentions: list[CharacterMention]
+) -> list[Character]:
+    """Pick, per base name with several age variants, the variant whose
+    voice-age matches THIS chapter's mention age — so the heuristic planner
+    attributes the name to the right-aged character. Single characters pass
+    through unchanged."""
+    groups: dict[str, list[Character]] = {}
+    for c in characters:
+        groups.setdefault(_base_name(c.display_name).lower(), []).append(c)
+    want: dict[str, str] = {
+        m.surface_name.strip().lower(): _voice_age(m.age_band.value)
+        for m in chapter_mentions}
+    out: list[Character] = []
+    for base, variants in groups.items():
+        if len(variants) == 1:
+            out.append(variants[0])
+            continue
+        va = want.get(base)
+        if va is None:                       # alias / token fallback
+            toks = {t for v in variants for t in _name_tokens(v.display_name)}
+            va = next((_voice_age(m.age_band.value) for m in chapter_mentions
+                       if _name_tokens(m.surface_name) & toks), None)
+        pick = next((v for v in variants
+                     if va is not None and _voice_age(v.age_band.value) == va), None)
+        out.append(pick or variants[0])
+    return out
+
+
+# --- roster from mentions (shared by the chapter pipeline + partial cards) ---
+
+
+# Lower-case words that mark a candidate as a phrase, not a name ("Tim und
+# seine Freunde", "der alte Mann"). Titles like "Tante"/"Mrs" are NOT here.
+_NAME_CONNECTORS = {
+    "und", "oder", "sowie", "mit", "von", "der", "die", "das", "den", "dem",
+    "ein", "eine", "einer", "seine", "seinen", "ihre", "ihren", "the", "and",
+    "or", "of", "im", "am", "zur", "zum", "&", "an",
+}
+
+# Common/relationship/body/speech nouns gemma glues onto a name to form a
+# reference ("Sues Bemerkung", "Tims Vater", "James Enkelin"). When one of these
+# appears as a NON-leading token the candidate is a phrase, not a character — a
+# leading title ("Tante Alison", "Lieutenant Krober") is fine and not listed.
+_NON_NAME_WORDS = {
+    "vater", "mutter", "mama", "papa", "bruder", "schwester", "sohn", "tochter",
+    "enkel", "enkelin", "cousin", "cousine", "neffe", "nichte",
+    "bemerkung", "stimme", "stimmen", "auge", "augen", "hand", "hände", "haende",
+    "gesicht", "kopf", "blick", "wort", "worte", "gedanke", "gedanken", "freund",
+    "freunde", "freundin", "seite", "arm", "arme", "schulter", "herz", "körper",
+    "koerper", "haus", "zimmer", "leben", "gruppe", "familie", "leute",
+}
+
+
+def _strip_parens(name: str) -> str:
+    n = re.sub(r"\s*\([^)]*\)", "", name).strip()
+    return n or name
+
+
+def _depossess(name: str, known: set[str]) -> str:
+    """Strip a German possessive 's' from tokens whose base is a known name
+    token ("Sue Bakers" -> "Sue Baker", "Sues" -> "Sue")."""
+    out = []
+    for t in name.split():
+        if len(t) > 3 and t.lower().endswith("s") and t[:-1].lower() in known:
+            out.append(t[:-1])
+        else:
+            out.append(t)
+    return " ".join(out)
+
+
+def _is_phrase_name(name: str, known: set[str] | None = None) -> bool:
+    """True if a surface looks like a phrase/reference, not a character name."""
+    toks = name.split()
+    if len(toks) > 3:
+        return True
+    low = [t.lower() for t in toks]
+    if any(t in _NAME_CONNECTORS for t in low):
+        return True
+    if any(t in _NON_NAME_WORDS for t in low[1:]):      # common noun after a name
+        return True
+    if known and len(toks) >= 2 and low[0].endswith("s") and low[0][:-1] in known:
+        return True                                     # "Tims Vater", "Sues …"
+    return False
+
+
+def _proper_score(name: str) -> int:
+    """Higher = looks more like a real character name. Prefers a clean
+    'First Last' over a bare first name, a nickname, or a phrase."""
+    toks = name.split()
+    s = -100 if _is_phrase_name(name) else 0
+    s += {1: 4, 2: 12, 3: 6}.get(len(toks), -8)     # "First Last" is ideal
+    if toks and all(t[:1].isupper() for t in toks):
+        s += 3
+    return s
+
+
+def _best_display(names: list[str]) -> str:
+    """Pick the cleanest proper name among a character's surface forms."""
+    cand = sorted({_strip_parens(n) for n in names if n and n.strip()})
+    return max(cand, key=lambda n: (_proper_score(n), len(n))) if cand else names[0]
+
+
+def roster_from_mentions(mentions: list[CharacterMention]) -> list[Character]:
+    """Build the speaking-cast roster (ids + roles) from raw mentions.
+
+    Deterministic and reliable (no flaky LLM reduce): group identical surfaces,
+    fold variants (Jeff -> Jeff Baker, Tim -> Timothy Baker), then pick the
+    cleanest PROPER name as the card name (so "Tim und seine Freunde" /
+    "Sue Bakers Augen" never win over "Tim Baker" / "Sue Baker"). Age splitting
+    is opt-in (CONFIG.extraction.split_age_voices)."""
+    grouped = group_mentions(mentions)
+    if not grouped:
+        return []
+    # Known name tokens = tokens seen in 2+ surfaces (excluding noise words) —
+    # used to depossess surnames and spot possessive references.
+    tok_freq: Counter = Counter()
+    for g in grouped:
+        for t in _strip_parens(g.display_name).split():
+            tl = t.lower()
+            if tl not in _NAME_CONNECTORS and tl not in _NON_NAME_WORDS and len(tl) > 2:
+                tok_freq[tl] += 1
+    known = {t for t, n in tok_freq.items() if n >= 2}
+    # Normalise (strip parens + possessive) then drop phrase/reference candidates.
+    kept: list[RegistryCharacter] = []
+    for g in grouped:
+        g.display_name = _depossess(_strip_parens(g.display_name), known)
+        if not _is_phrase_name(g.display_name, known):
+            kept.append(g)
+    grouped = kept or grouped
+    canon = code_merge(grouped)
+    for c in canon:                      # choose the cleanest name as the card name
+        best = _best_display([c.display_name, *c.aliases])
+        if best != c.display_name:
+            extra = c.display_name
+            c.display_name = best
+            c.aliases = sorted({a for a in [*c.aliases, extra] if a and a != best})
+    if CONFIG.extraction.split_age_voices:
+        canon = split_age_variants(canon, mentions)
+    build_descriptions(canon)
+    return assign_roles(speaking_only(canon))
+
+
 # --- Orchestration -----------------------------------------------------------
 
 

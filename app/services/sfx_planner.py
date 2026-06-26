@@ -115,15 +115,29 @@ _COMPILED = [
 ]
 
 
+# Density -> (max cues per line, max cues per chapter; 0 chapter cap = no limit).
+_DENSITY = {
+    "off": (0, 0),
+    "sparse": (1, 6),
+    "normal": (2, 0),
+    "rich": (3, 0),
+}
+
+
 def annotate(lines: list[LineItem]) -> None:
     """Attach keyword-detected SfxCues to narration lines in place.
 
     This is the deterministic LOCAL fallback. Lines that already carry cues
-    (e.g. context-specific ones written by a chapter agent) are left untouched."""
+    (e.g. context-specific ones written by a chapter agent) are left untouched.
+    How many cues are placed is governed by CONFIG.tts.sfx_density."""
+    from app.core.config import CONFIG
+    per_line, chap_cap = _DENSITY.get(CONFIG.tts.sfx_density, (2, 0))
+    total = 0
     for line in lines:
         if line.sfx:                         # agent/dynamic cues — keep them
             continue
-        if line.type is not LineType.narration:
+        if line.type is not LineType.narration or per_line == 0 or (
+                chap_cap and total >= chap_cap):
             line.sfx = []
             continue
         cues: list[SfxCue] = []
@@ -131,7 +145,8 @@ def annotate(lines: list[LineItem]) -> None:
             if rx.search(line.text):
                 cues.append(SfxCue(prompt=prompt, length_s=length,
                                    gain_db=gain, placement=placement))
-                if len(cues) >= 2:
+                total += 1
+                if len(cues) >= per_line or (chap_cap and total >= chap_cap):
                     break
         line.sfx = cues
 

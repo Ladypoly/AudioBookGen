@@ -308,7 +308,11 @@ class ChaptersScreen(QWidget):
         root.addWidget(title)
 
         bar = QHBoxLayout()
-        self.detect_btn = QPushButton("Detect chapters")
+        self.detect_btn = QPushButton("Re-detect chapters")
+        self.detect_btn.setObjectName("Ghost")
+        self.detect_btn.setToolTip(
+            "Rebuild chapters from the PDF — discards the imported storyboards "
+            "(speaker attribution). Normally not needed; import already does this.")
         self.detect_btn.clicked.connect(self._detect)
         bar.addWidget(self.detect_btn)
 

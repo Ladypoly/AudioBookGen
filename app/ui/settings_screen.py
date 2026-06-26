@@ -9,7 +9,7 @@ import logging
 from collections import defaultdict
 from pathlib import Path
 
-from PySide6.QtCore import Qt, QTimer, QUrl
+from PySide6.QtCore import QEvent, QObject, Qt, QTimer, QUrl
 from PySide6.QtMultimedia import QAudioOutput, QMediaPlayer
 from PySide6.QtWidgets import (
     QCheckBox,
@@ -28,14 +28,32 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from app.services import demo_service, settings_service
+from app.services import demo_service, ollama_service, settings_service
 from app.ui.waveform_widget import WaveformWidget
 from app.workers.demo_worker import DemoGenerateWorker, DemoRemixWorker
-from app.workers.models_worker import ModelsWorker
+from app.workers.models_worker import MaxCtxWorker, ModelsWorker, PricedModelsWorker
 
 logger = logging.getLogger(__name__)
 
 _MIX_SECTION = "Audio / Mix"
+
+
+class _WheelGuard(QObject):
+    """Stops the mouse wheel from changing combo boxes / spin boxes while the
+    user is just scrolling the settings page. A widget only reacts to the wheel
+    once it has keyboard focus (i.e. the user clicked into it). The scroll is
+    forwarded to the surrounding scroll area so the page still scrolls."""
+
+    def eventFilter(self, obj, event) -> bool:  # noqa: N802
+        if event.type() == QEvent.Type.Wheel and not obj.hasFocus():
+            par = obj.parent()
+            while par is not None and not isinstance(par, QScrollArea):
+                par = par.parent()
+            if par is not None:
+                from PySide6.QtWidgets import QApplication
+                QApplication.sendEvent(par.viewport(), event)
+            return True            # never let the wheel change the value
+        return False
 
 
 class SettingsScreen(QWidget):
@@ -43,6 +61,7 @@ class SettingsScreen(QWidget):
         super().__init__(parent)
         self._widgets: dict[str, tuple] = {}     # path -> (widget, kind)
         self._voice_edits: dict[str, QLineEdit] = {}
+        self._wheel_guard = _WheelGuard(self)    # block scroll-to-change
 
         root = QVBoxLayout(self)
         root.setContentsMargins(16, 16, 16, 16)
@@ -66,7 +85,10 @@ class SettingsScreen(QWidget):
             box = QGroupBox(section)
             form = QFormLayout(box)
             for _sec, label, path, kind, choices in fields:
+                if path == "ollama.ctx_cap":
+                    continue            # custom model-aware dropdown in _llm_box
                 w = self._make_widget(kind, settings_service._get(path), choices)
+                self._guard_wheel(w)
                 self._widgets[path] = (w, kind)
                 if section == _MIX_SECTION:
                     self._connect_live(w, kind, path)
@@ -117,6 +139,17 @@ class SettingsScreen(QWidget):
         if not demo_service.demo_audio_path().exists() and demo_service.has_clips():
             self.demo_status.setText("Restoring demo from saved clips…")
             self._start_remix()
+
+    def showEvent(self, event) -> None:  # noqa: N802
+        super().showEvent(event)
+        # Reload installed models + ctx options every time Settings opens — the
+        # build-time fetch can miss if Ollama was still starting up then.
+        if hasattr(self, "_ollama_combo"):
+            self._fetch_models(self._ollama_combo, "ollama",
+                               self._ollama_url.text(), "")
+            self._refresh_ctx_for_model(self._ollama_combo.currentText())
+        if hasattr(self, "_api_combo"):
+            self._fetch_api_models()
 
     # --- demo panel ---------------------------------------------------------
     def _demo_box(self) -> QGroupBox:
@@ -174,14 +207,18 @@ class SettingsScreen(QWidget):
         backend = QComboBox()
         backend.addItems(["ollama", "openai"])
         backend.setCurrentText(str(g("ollama.backend")))
+        self._guard_wheel(backend)
         self._widgets["ollama.backend"] = (backend, "choice")
         form.addRow("Backend", backend)
 
         o_url = QLineEdit(str(g("ollama.base_url")))
         self._widgets["ollama.base_url"] = (o_url, "str")
         form.addRow("Ollama URL", o_url)
-        o_row, _ = self._model_row("ollama.model", "ollama", lambda: o_url.text(), lambda: "")
+        o_row, o_combo = self._model_row("ollama.model", "ollama", lambda: o_url.text(), lambda: "")
         form.addRow("Ollama model", o_row)
+        # Fill the dropdown synchronously at build (a fast local GET /api/tags)
+        # so it is never empty, then refresh asynchronously on every open.
+        self._populate_combo(o_combo, ollama_service.list_ollama_models(o_url.text()))
 
         a_url = QLineEdit(str(g("ollama.api_base_url")))
         self._widgets["ollama.api_base_url"] = (a_url, "str")
@@ -190,17 +227,40 @@ class SettingsScreen(QWidget):
         a_key.setEchoMode(QLineEdit.EchoMode.Password)
         self._widgets["ollama.api_key"] = (a_key, "password")
         form.addRow("API key", a_key)
-        a_row, _ = self._model_row("ollama.api_model", "openai",
-                                   lambda: a_url.text(), lambda: a_key.text())
+        a_row, a_combo = self._model_row("ollama.api_model", "openai",
+                                         lambda: a_url.text(), lambda: a_key.text())
         form.addRow("API model", a_row)
+        self._api_combo, self._api_url, self._api_key = a_combo, a_url, a_key
+        # Entering / changing the key or base URL auto-loads the API model list.
+        a_key.editingFinished.connect(self._fetch_api_models)
+        a_url.editingFinished.connect(self._fetch_api_models)
+        if a_key.text().strip():
+            self._fetch_api_models()
 
         temp = QDoubleSpinBox()
         temp.setRange(0.0, 2.0)
         temp.setSingleStep(0.05)
         temp.setDecimals(2)
         temp.setValue(float(g("ollama.temperature")))
+        self._guard_wheel(temp)
         self._widgets["ollama.temperature"] = (temp, "float")
         form.addRow("Temperature", temp)
+
+        # Context cap: a dropdown of context sizes up to the SELECTED model's
+        # real max (auto-detected via /api/show). Guards VRAM — Ollama allocates
+        # the whole KV cache up front. Stored as an int (currentData).
+        self._ctx_combo = QComboBox()
+        self._ctx_combo.setToolTip(
+            "Max context window the LLM may use. Up to the model's real maximum; "
+            "higher needs more VRAM (too high spills to CPU and is very slow).")
+        self._guard_wheel(self._ctx_combo)
+        self._widgets["ollama.ctx_cap"] = (self._ctx_combo, "intchoice")
+        form.addRow("LLM context cap", self._ctx_combo)
+        self._ollama_combo = o_combo
+        self._ollama_url = o_url
+        self._populate_ctx_combo(int(g("ollama.ctx_cap")), 0)
+        o_combo.currentTextChanged.connect(self._refresh_ctx_for_model)
+        self._refresh_ctx_for_model(o_combo.currentText())
 
         self._llm_ollama = [o_url, o_row]
         self._llm_openai = [a_url, a_key, a_row]
@@ -208,26 +268,131 @@ class SettingsScreen(QWidget):
         self._update_llm_visibility(backend.currentText())
         return box
 
+    # --- context-cap dropdown (model-aware) ---------------------------------
+    @staticmethod
+    def _ctx_label(v: int) -> str:
+        if v % (1024 * 1024) == 0:
+            return f"{v // (1024 * 1024)}M"
+        return f"{v // 1024}k"
+
+    def _populate_ctx_combo(self, current: int, max_ctx: int) -> None:
+        sizes = [4096, 8192, 16384, 32768, 65536, 131072,
+                 262144, 524288, 1048576]
+        if max_ctx:
+            opts = [s for s in sizes if s <= max_ctx]
+            if max_ctx not in opts:
+                opts.append(max_ctx)
+        else:
+            opts = [s for s in sizes if s <= max(current, 32768)]
+        opts = sorted(set(opts) | {current})
+        combo = self._ctx_combo
+        combo.blockSignals(True)
+        combo.clear()
+        for s in opts:
+            suffix = " (model max)" if max_ctx and s == max_ctx else ""
+            combo.addItem(self._ctx_label(s) + suffix, s)
+        combo.setCurrentIndex(opts.index(current) if current in opts else len(opts) - 1)
+        combo.blockSignals(False)
+
+    def _refresh_ctx_for_model(self, model: str) -> None:
+        model = (model or "").strip()
+        if not model:
+            return
+        w = MaxCtxWorker(self._ollama_url.text(), model, self)
+        workers = getattr(self, "_ctx_workers", None)
+        if workers is None:
+            workers = self._ctx_workers = []
+        workers.append(w)
+        w.loaded.connect(self._on_ctx_max)
+        w.finished.connect(lambda: workers.remove(w) if w in workers else None)
+        w.start()
+
+    def _on_ctx_max(self, model: str, max_ctx: int) -> None:
+        cur = self._ctx_combo.currentData() or int(settings_service._get("ollama.ctx_cap"))
+        self._populate_ctx_combo(int(cur), int(max_ctx))
+
+    def _guard_wheel(self, w) -> None:
+        """Make a combo/spin ignore the wheel unless focused (anti-misscroll)."""
+        from PySide6.QtWidgets import QAbstractSpinBox, QComboBox
+        if isinstance(w, (QComboBox, QAbstractSpinBox)):
+            w.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
+            w.installEventFilter(self._wheel_guard)
+
     def _model_row(self, path, backend, get_url, get_key):
         container = QWidget()
         h = QHBoxLayout(container)
         h.setContentsMargins(0, 0, 0, 0)
+        # Plain non-editable dropdown — same as the Backend combo (which works).
         combo = QComboBox()
-        combo.setEditable(True)
-        combo.setCurrentText(str(settings_service._get(path)))
+        combo.setMaxVisibleItems(20)
+        combo.setMinimumWidth(260)
+        saved = str(settings_service._get(path))
+        if saved:                       # keep the saved model selectable + shown
+            combo.addItem(saved)
+            combo.setCurrentText(saved)
+        self._guard_wheel(combo)
         self._widgets[path] = (combo, "choice")
         btn = QPushButton("↻")
         btn.setFixedWidth(34)
-        btn.setToolTip("Load available models")
+        btn.setToolTip("Reload available models")
         btn.clicked.connect(lambda: self._fetch_models(combo, backend, get_url(), get_key()))
         h.addWidget(combo, 1)
         h.addWidget(btn)
         return container, combo
 
+    def _fetch_api_models(self) -> None:
+        """Load the OpenAI/OpenRouter model list (with pricing) once a key + base
+        URL are set."""
+        key = self._api_key.text().strip()
+        url = self._api_url.text().strip()
+        if not (key and url):
+            return
+        workers = getattr(self, "_models_workers", None)
+        if workers is None:
+            workers = self._models_workers = []
+        w = PricedModelsWorker(url, key, self)
+        workers.append(w)
+        w.loaded.connect(self._on_api_models)
+        w.finished.connect(lambda: workers.remove(w) if w in workers else None)
+        w.start()
+
+    @staticmethod
+    def _api_label(d: dict) -> str:
+        p, c = d.get("prompt"), d.get("completion")
+        if p is None and c is None:
+            return d["id"]                       # no pricing (e.g. vLLM/LM Studio)
+
+        def f(x):
+            if x is None:
+                return "?"
+            return "free" if x == 0 else f"${x:.2f}"
+        return f"{d['id']}   (in {f(p)} / out {f(c)} per 1M)"
+
+    def _on_api_models(self, items: list) -> None:
+        combo = self._api_combo
+        cur = combo.currentData() or combo.currentText()
+        combo.blockSignals(True)
+        combo.clear()
+        for d in items:
+            combo.addItem(self._api_label(d), d["id"])
+        idx = combo.findData(cur)
+        if idx < 0 and cur:                      # keep a saved id not in the list
+            combo.insertItem(0, cur, cur)
+            idx = 0
+        combo.setCurrentIndex(max(0, idx))
+        combo.blockSignals(False)
+
     def _fetch_models(self, combo, backend, url, key) -> None:
-        self._models_worker = ModelsWorker(backend, url, key, self)
-        self._models_worker.loaded.connect(lambda models: self._populate_combo(combo, models))
-        self._models_worker.start()
+        # Keep every worker alive in a list — a second fetch must not GC the
+        # first (overwriting a single attr would drop the running thread).
+        workers = getattr(self, "_models_workers", None)
+        if workers is None:
+            workers = self._models_workers = []
+        w = ModelsWorker(backend, url, key, self)
+        workers.append(w)
+        w.loaded.connect(lambda models: self._populate_combo(combo, models))
+        w.finished.connect(lambda: workers.remove(w) if w in workers else None)
+        w.start()
 
     @staticmethod
     def _populate_combo(combo, models) -> None:
@@ -279,8 +444,13 @@ class SettingsScreen(QWidget):
             return w.value()
         if kind == "float":
             return w.value()
+        if kind == "intchoice":
+            return int(w.currentData() or 0)
         if kind == "choice":
-            return w.currentText()
+            # API-model items carry the real id in itemData (the text shows the
+            # price); plain combos have no data, so fall back to the text.
+            data = w.currentData()
+            return data if data is not None else w.currentText()
         return w.text()
 
     def _connect_live(self, w, kind, path) -> None:
@@ -288,6 +458,8 @@ class SettingsScreen(QWidget):
             w.valueChanged.connect(lambda *_: self._mix_changed(path, kind, w))
         elif kind == "bool":
             w.toggled.connect(lambda *_: self._mix_changed(path, kind, w))
+        elif kind == "choice":
+            w.currentTextChanged.connect(lambda *_: self._mix_changed(path, kind, w))
         else:
             w.editingFinished.connect(lambda: self._mix_changed(path, kind, w))
 

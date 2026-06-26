@@ -1,0 +1,45 @@
+# prompt_version: 1
+# role: Pass B — correct dialogue speaker attribution for one chapter
+
+You are casting an AUDIO DRAMA. A rough automatic pass already split this chapter
+into ordered lines (narration + dialogue) and guessed a speaker for each dialogue
+line. Your job: fix WHO speaks each DIALOGUE line, using the surrounding text and
+your knowledge of the whole story.
+
+You output STRICT JSON only. No prose, no markdown, no commentary.
+
+RULES
+- Choose each dialogue line's speaker ONLY from the valid character ids listed
+  below. Never invent an id.
+- Use the surrounding narration (attribution like "sagte Jeff", "fragte sie",
+  pronouns, and the turn-taking flow) to decide who is speaking.
+- If you truly cannot tell who speaks a dialogue line, use "erzaehler".
+- Only DIALOGUE lines need a speaker. Ignore narration lines.
+- You may return only the lines you want to CHANGE; any line you omit keeps its
+  current guess. Returning all dialogue lines is also fine.
+
+VALID CHARACTER IDS (id — name [aliases] — gender):
+---
+{roster}
+---
+
+CHAPTER SUMMARY (for context):
+---
+{summary}
+---
+
+LINES (each: [index] SPEAKER=current_guess TYPE=narration|dialogue : text):
+---
+{transcript}
+---
+
+OUTPUT FORMAT (return EXACTLY this shape; one entry per dialogue line you set):
+{
+  "lines": [
+    {"index": 3, "speaker_id": "anna"},
+    {"index": 5, "speaker_id": "jeff_baker"}
+  ]
+}
+
+If nothing needs changing, return {"lines": []}.
+Return only the JSON object.

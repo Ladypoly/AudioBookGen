@@ -47,6 +47,8 @@ FIELDS: list[tuple] = [
     ("Audio / Mix", "Mastering on", "tts.master_enabled", "bool", None),
     ("Audio / Mix", "Ambience on", "tts.ambience_enabled", "bool", None),
     ("Audio / Mix", "SFX on", "tts.sfx_enabled", "bool", None),
+    ("Audio / Mix", "SFX density", "tts.sfx_density", "choice",
+     ["off", "sparse", "normal", "rich"]),
     ("Audio / Mix", "Intro music on", "tts.music_enabled", "bool", None),
     ("Audio / Mix", "Music level (dB)", "tts.music_gain_db", "float", None),
     ("Audio / Mix", "Music length (s)", "tts.music_seconds", "float", None),
@@ -78,6 +80,7 @@ FIELDS: list[tuple] = [
     ("Extraction", "Web search (bio/afterword/enrich)", "extraction.web_search", "bool", None),
     ("Extraction", "Front matter (Vorwort)", "extraction.front_matter", "bool", None),
     ("Extraction", "Afterword (Nachwort)", "extraction.afterword", "bool", None),
+    ("Extraction", "Split character voices by age", "extraction.split_age_voices", "bool", None),
     ("Extraction", "Chunk size (chars)", "extraction.chunk_chars", "int", None),
     ("Extraction", "Chunk overlap (chars)", "extraction.chunk_overlap_chars", "int", None),
     ("Extraction", "Web results", "extraction.web_results", "int", None),
@@ -93,7 +96,9 @@ FIELDS: list[tuple] = [
     ("Performance", "TTS timeout (s)", "comfy.tts_timeout_s", "float", None),
     ("Performance", "Audio/SFX timeout (s)", "comfy.audio_timeout_s", "float", None),
     ("Performance", "LLM request timeout (s)", "ollama.request_timeout_s", "float", None),
-    ("Performance", "LLM context (num_ctx)", "ollama.num_ctx", "int", None),
+    ("Performance", "LLM auto context (from model)", "ollama.auto_ctx", "bool", None),
+    ("Performance", "LLM context cap (VRAM ceiling)", "ollama.ctx_cap", "int", None),
+    ("Performance", "LLM context (num_ctx, manual)", "ollama.num_ctx", "int", None),
     ("Performance", "LLM max tokens (num_predict)", "ollama.num_predict", "int", None),
 ]
 

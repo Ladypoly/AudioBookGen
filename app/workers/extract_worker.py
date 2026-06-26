@@ -13,11 +13,14 @@ from PySide6.QtCore import QObject, QThread, Signal
 from app.core.config import CONFIG
 from app.schemas.characters import Character
 from app.services import (
+    afterword,
+    chapter_service,
     character_service,
-    pdf_service,
+    front_matter,
     portrait_service,
     project_service,
     research_service,
+    story_service,
     style_service,
 )
 
@@ -44,6 +47,23 @@ class ExtractWorker(QThread):
     def _is_cancelled(self) -> bool:
         return self._cancelled
 
+    def _build_index(self, project, content_chapters: list) -> None:
+        """Add ch00 front matter + a Nachwort and write the chapters index."""
+        ordered = list(content_chapters)
+        if CONFIG.extraction.front_matter:
+            fm = front_matter.build(
+                project, [{"number": c.number, "title": c.title,
+                           "chapter_id": c.chapter_id} for c in content_chapters])
+            chapter_service.save_chapter(project, fm)
+            ordered = [fm, *ordered]
+        if CONFIG.extraction.afterword:
+            aw = afterword.build(
+                project, number=(content_chapters[-1].number + 1) if content_chapters else 1)
+            if aw is not None:
+                chapter_service.save_chapter(project, aw)
+                ordered.append(aw)
+        chapter_service.save_index(project, ordered)
+
     def run(self) -> None:  # noqa: D102 (QThread entry point)
         try:
             from app.services import comfy_launcher
@@ -52,20 +72,20 @@ class ExtractWorker(QThread):
             self.progress.emit(0, 0, "Reading PDF…")
             project = project_service.open_project(self._pdf_path)
             project_service.save_source(project, self._pdf_path)
-            chunks = pdf_service.load_chunks(self._pdf_path)
-            if not chunks:
-                self.failed.emit("No extractable text found in PDF.")
-                return
 
-            characters: list[Character] = character_service.extract_characters(
-                chunks,
+            # Chapter-centric extraction: detect -> rolling summaries + mentions
+            # -> roster -> heuristic plan + LLM speaker refine (story_service).
+            characters, content_chapters = story_service.extract_story(
+                project,
                 progress=lambda d, t, label: self.progress.emit(d, t, label),
                 is_cancelled=self._is_cancelled,
                 partial=lambda chars: self.partial.emit(chars),
-                project=project,
             )
             if self._cancelled:
                 self.failed.emit("Cancelled.")
+                return
+            if not content_chapters:
+                self.failed.emit("No extractable text found in PDF.")
                 return
 
             # Optional online research (spoiler-filtered) for looks/voice + style.
@@ -79,9 +99,9 @@ class ExtractWorker(QThread):
                 self.progress.emit(0, 0, "Researching book style online")
                 web_style_ctx = research_service.style_context(project.title)
 
-            # Style bible while the LLM is still loaded (before portraits unload it).
-            self.progress.emit(len(chunks), len(chunks), "Building style bible")
-            sample = "\n".join(chunks[:2])
+            # Style bible from the opening chapters (LLM still loaded).
+            self.progress.emit(0, 0, "Building style bible")
+            sample = "\n".join(c.text for c in content_chapters[:2])[:12000]
             bible = style_service.generate_style_bible(
                 project.title, sample, web_context=web_style_ctx
             )
@@ -95,9 +115,14 @@ class ExtractWorker(QThread):
                 progress=lambda d, t, label: self.progress.emit(d, t, label),
             )
 
-            # Persist everything into the book's project folder.
+            # Persist characters + style bible (afterword reads the style genre).
             project_service.save_characters(project, characters)
             project_service.save_style_bible(project, bible)
+
+            # Front matter + afterword + the chapters index (so the Chapters
+            # screen shows the curated storyboards straight after import).
+            self.progress.emit(0, 0, "Building intro / outro chapters")
+            self._build_index(project, content_chapters)
 
             self.finished_ok.emit(characters)
         except Exception as err:  # surfaced to the UI, never crash the thread

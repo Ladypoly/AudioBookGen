@@ -31,15 +31,54 @@ class OllamaError(RuntimeError):
 
 
 def list_ollama_models(base_url: str) -> list[str]:
-    """Installed Ollama models (GET /api/tags). [] on failure."""
+    """Installed Ollama models (GET /api/tags). [] on failure (e.g. Ollama not
+    running) — logged as a single quiet line, never a stack trace."""
     try:
         with httpx.Client(timeout=5.0) as c:
             r = c.get(f"{base_url.rstrip('/')}/api/tags")
             r.raise_for_status()
         return sorted(m["name"] for m in r.json().get("models", []))
-    except Exception:  # noqa: BLE001
-        logger.warning("could not list Ollama models", exc_info=True)
+    except Exception as err:  # noqa: BLE001
+        logger.info("Ollama models unavailable at %s (%s)", base_url, type(err).__name__)
         return []
+
+
+_CTX_CACHE: dict[str, int] = {}
+
+
+def model_max_ctx(base_url: str, model: str) -> int | None:
+    """The model's max context window (POST /api/show -> model_info). None on
+    failure. The key is architecture-prefixed (gemma2.context_length,
+    llama.context_length, …) so we match any key ending in .context_length."""
+    try:
+        with httpx.Client(timeout=8.0) as c:
+            r = c.post(f"{base_url.rstrip('/')}/api/show", json={"model": model})
+            r.raise_for_status()
+        info = r.json().get("model_info", {})
+        for k, v in info.items():
+            if k.endswith(".context_length") and isinstance(v, int):
+                return v
+    except Exception as err:  # noqa: BLE001
+        logger.info("context length for %s unavailable (%s)", model, type(err).__name__)
+    return None
+
+
+def resolve_num_ctx() -> int:
+    """Effective num_ctx: the model's real max (clamped to ctx_cap) when
+    auto_ctx is on, else the manual num_ctx. Cached per model.
+
+    The cap guards VRAM: Ollama allocates the whole KV cache up front, so a
+    128k/1M window would spill to CPU (very slow) on a normal GPU."""
+    cfg = CONFIG.ollama
+    if cfg.backend != "ollama" or not cfg.auto_ctx:
+        return cfg.num_ctx
+    key = cfg.model
+    if key not in _CTX_CACHE:
+        mx = model_max_ctx(cfg.base_url, cfg.model)
+        _CTX_CACHE[key] = min(mx, cfg.ctx_cap) if mx else cfg.num_ctx
+        logger.info("num_ctx for %s = %d (model max %s, cap %d)",
+                    key, _CTX_CACHE[key], mx, cfg.ctx_cap)
+    return _CTX_CACHE[key]
 
 
 def list_openai_models(base_url: str, api_key: str) -> list[str]:
@@ -50,9 +89,41 @@ def list_openai_models(base_url: str, api_key: str) -> list[str]:
             r = c.get(f"{base_url.rstrip('/')}/models", headers=headers)
             r.raise_for_status()
         return sorted(m["id"] for m in r.json().get("data", []))
-    except Exception:  # noqa: BLE001
-        logger.warning("could not list API models", exc_info=True)
+    except Exception as err:  # noqa: BLE001
+        logger.info("API models unavailable at %s (%s)", base_url, type(err).__name__)
         return []
+
+
+def list_openai_models_priced(base_url: str, api_key: str) -> list[dict]:
+    """Models with pricing (OpenRouter exposes a `pricing` block per model).
+
+    Returns [{id, prompt, completion}] where prompt/completion are USD per
+    MILLION tokens (None when the API gives no pricing, e.g. vLLM/LM Studio)."""
+    try:
+        headers = {"Authorization": f"Bearer {api_key}"} if api_key else {}
+        with httpx.Client(timeout=10.0) as c:
+            r = c.get(f"{base_url.rstrip('/')}/models", headers=headers)
+            r.raise_for_status()
+        data = r.json().get("data", [])
+    except Exception as err:  # noqa: BLE001
+        logger.info("API models unavailable at %s (%s)", base_url, type(err).__name__)
+        return []
+
+    def _per_m(v) -> float | None:
+        try:
+            return float(v) * 1_000_000          # USD/token -> USD/1M tokens
+        except (TypeError, ValueError):
+            return None
+
+    out = []
+    for m in data:
+        pricing = m.get("pricing") or {}
+        out.append({
+            "id": m["id"],
+            "prompt": _per_m(pricing.get("prompt")),
+            "completion": _per_m(pricing.get("completion")),
+        })
+    return sorted(out, key=lambda d: d["id"])
 
 
 def _post_openai(prompt: str, schema_dict: dict) -> str:
@@ -77,7 +148,7 @@ def _post_openai(prompt: str, schema_dict: dict) -> str:
     return data["choices"][0]["message"]["content"]
 
 
-def _post_generate(prompt: str, fmt: object) -> str:
+def _post_generate(prompt: str, fmt: object, num_predict: int | None = None) -> str:
     if CONFIG.ollama.backend == "openai":
         return _post_openai(prompt, fmt)   # fmt is schema.model_json_schema()
     cfg = CONFIG.ollama
@@ -93,8 +164,8 @@ def _post_generate(prompt: str, fmt: object) -> str:
             "temperature": cfg.temperature,
             "repeat_penalty": cfg.repeat_penalty,
             "repeat_last_n": cfg.repeat_last_n,
-            "num_ctx": cfg.num_ctx,
-            "num_predict": cfg.num_predict,
+            "num_ctx": resolve_num_ctx(),
+            "num_predict": num_predict or cfg.num_predict,
         },
     }
     url = f"{cfg.base_url.rstrip('/')}/api/generate"
@@ -105,11 +176,12 @@ def _post_generate(prompt: str, fmt: object) -> str:
     return data.get("response", "")
 
 
-def generate_json(prompt: str, schema: type[T]) -> T:
+def generate_json(prompt: str, schema: type[T], num_predict: int | None = None) -> T:
     """Call Ollama with schema-constrained output and validate against `schema`.
 
     Retries with a corrective suffix on transport errors or validation
-    failures, up to CONFIG.ollama.max_retries extra attempts.
+    failures, up to CONFIG.ollama.max_retries extra attempts. `num_predict`
+    overrides the output-token budget (needed for multi-chapter batch calls).
     """
     cfg = CONFIG.ollama
     last_err: Exception | None = None
@@ -118,7 +190,7 @@ def generate_json(prompt: str, schema: type[T]) -> T:
 
     for attempt in range(cfg.max_retries + 1):
         try:
-            raw = _post_generate(attempt_prompt, fmt)
+            raw = _post_generate(attempt_prompt, fmt, num_predict)
             obj = json.loads(raw)
             return schema.model_validate(obj)
         except (httpx.HTTPError, json.JSONDecodeError, ValidationError) as err:

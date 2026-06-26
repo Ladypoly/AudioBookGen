@@ -48,6 +48,21 @@ class LineItem(BaseModel):
     audio_path: str | None = None
 
 
+class SpeakerLine(BaseModel):
+    """One corrected speaker attribution for a dialogue line (by line index)."""
+
+    index: int
+    speaker_id: str
+
+
+class SpeakerRefineResult(BaseModel):
+    """Pass B output: corrected speaker_id per dialogue line index. Only the
+    lines the model wants to change need appear; unlisted lines keep the
+    heuristic guess."""
+
+    lines: list[SpeakerLine] = Field(default_factory=list)
+
+
 class Chapter(BaseModel):
     chapter_id: str
     number: int

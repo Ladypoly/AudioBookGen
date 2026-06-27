@@ -44,3 +44,12 @@ env/
 Thumbs.db
 .idea/
 .vscode/
+
+# --- Web UI / build outputs ---
+node_modules/
+frontend/dist/
+dist_sidecar/
+build/_work/
+installer/
+electron/ffmpeg/*.exe
+*.spec.bak

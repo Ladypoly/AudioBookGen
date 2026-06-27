@@ -63,9 +63,11 @@ def render_lines(
             line.audio_path = str(out)
             return
         try:
+            c = by_id.get(line.speaker_id)
             engine.synthesize(TTSRequest(
                 text=line.text, voice=_voice_for(line.speaker_id, by_id, proj),
                 delivery=line.delivery, out_path=out,
+                workflow=(c.tts_workflow or None) if c else None,
             ))
             line.audio_path = str(out)
         except Exception:  # noqa: BLE001
@@ -145,16 +147,33 @@ def build_chapter_mix(chapter: Chapter, load=None):
     def _sfx(cue):
         if not CONFIG.tts.sfx_enabled:
             return None
-        p = proj.sfx_clip_path(cue)
+        # User-dropped clip is used as-is; generated cues are content-addressed.
+        p = Path(cue.audio_path) if (cue.custom and cue.audio_path) else proj.sfx_clip_path(cue)
         if not p.exists():
             return None
         if p not in _sfx_cache:
             _sfx_cache[p] = load(p)
-        return _sfx_cache[p].apply_gain(cue.gain_db)
+        seg = _sfx_cache[p].apply_gain(cue.gain_db)
+        if getattr(cue, "fade_in_ms", 0):
+            seg = seg.fade_in(int(cue.fade_in_ms))
+        if getattr(cue, "fade_out_ms", 0):
+            seg = seg.fade_out(int(cue.fade_out_ms))
+        return seg
+
+    def _pitch_shift(seg, semitones: float):
+        """Resample-based pitch shift (also nudges tempo slightly — fine for the
+        small shifts used to vary the shared default one-off voices)."""
+        if not semitones:
+            return seg
+        factor = 2.0 ** (semitones / 12.0)
+        shifted = seg._spawn(seg.raw_data, overrides={"frame_rate": int(seg.frame_rate * factor)})
+        return shifted.set_frame_rate(seg.frame_rate)
 
     def _clip(line) -> "AudioSegment":
-        """Render a line's clip with its 'over' SFX overlaid."""
+        """Render a line's clip (pitch-shifted if set) with its 'over' SFX overlaid."""
         c = load(line.audio_path)
+        if getattr(line, "pitch_semitones", 0):
+            c = _pitch_shift(c, line.pitch_semitones)
         for cue in line.sfx:
             if cue.placement == "over":
                 s = _sfx(cue)
@@ -230,14 +249,13 @@ def build_chapter_mix(chapter: Chapter, load=None):
     return mix
 
 
-def assemble(chapter: Chapter, suffix: str = "") -> str | None:
-    """Build the chapter mix, master it and export a tagged MP3. Returns path."""
+def export_mix(chapter: Chapter, mix, suffix: str = "") -> str | None:
+    """Master + tag + export a finished AudioSegment to the chapter MP3."""
     from app.core.config import CONFIG
     from app.services import book_meta
-    proj = project_service.active()
-    mix = build_chapter_mix(chapter)
     if mix is None:
         return None
+    proj = project_service.active()
     proj.chapter_audio_dir.mkdir(parents=True, exist_ok=True)
     out = proj.chapter_audio_dir / f"{chapter.chapter_id}{suffix}.mp3"
     mix.export(out, format="mp3", bitrate=CONFIG.tts.mp3_bitrate)
@@ -252,6 +270,11 @@ def assemble(chapter: Chapter, suffix: str = "") -> str | None:
     chapter.audio_path = str(out)
     logger.info("Assembled chapter %s -> %s (%.1fs)", chapter.chapter_id, out, len(mix) / 1000)
     return str(out)
+
+
+def assemble(chapter: Chapter, suffix: str = "") -> str | None:
+    """Build the chapter mix, master it and export a tagged MP3. Returns path."""
+    return export_mix(chapter, build_chapter_mix(chapter), suffix)
 
 
 def render_chapter(

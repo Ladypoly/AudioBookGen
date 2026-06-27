@@ -156,6 +156,8 @@ def cues_for(chapter: Chapter) -> list[SfxCue]:
     seen, out = set(), []
     for line in chapter.lines:
         for cue in line.sfx:
+            if cue.custom:                  # user-dropped clip — never generated
+                continue
             key = (cue.prompt, cue.length_s)
             if key not in seen:
                 seen.add(key)

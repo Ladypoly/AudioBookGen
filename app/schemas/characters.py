@@ -102,6 +102,13 @@ class RegistryCharacter(BaseModel):
     # (their function/situation) — spoiler-light. Drives BOTH the voice-design
     # prompt and the portrait background/demeanor.
     context: str = ""
+    # In-character self-introduction line (LLM-written at extraction, editable).
+    # Spoken via TTS to produce the ~10s voice sample used as the clone reference.
+    sample_line: str = ""
+    # Per-character clone/TTS workflow override (filename in workflows/). Empty =
+    # use the global default (comfy.tts_workflow). Lets the narrator run on a fast
+    # no-emotion engine (OmniVoice) while expressive characters use Higgs.
+    tts_workflow: str = ""
     total_mentions: int = 0
     spoken_lines: int = 0
     needs_review: bool = False
@@ -129,6 +136,24 @@ class PortraitPromptResult(BaseModel):
 # --- Final registry entry (after role_importance assignment) -----------------
 
 
+class CharacterVariant(BaseModel):
+    """One age-stage of a character with its own look + voice.
+
+    A character that appears at several ages (e.g. child vs adult) carries one
+    variant per stage; the card shows slide-dots to switch between them. Empty
+    `variants` means a single-age character (the base fields are used).
+    """
+
+    age_band: AgeBand = AgeBand.unknown
+    label: str = ""                       # optional display label, e.g. "as a child"
+    appearance_description: str = ""
+    portrait_prompt: str = ""
+    portrait_path: str | None = None
+    voice_sample: str | None = None
+    custom_voice: bool = False
+    voice_hint: str = ""
+
+
 class Character(RegistryCharacter):
     """Registry entry shown in the UI as a character card."""
 
@@ -147,3 +172,5 @@ class Character(RegistryCharacter):
     # Local path to a generated portrait image, if any.
     portrait_path: str | None = None
     active: bool = True
+    # Per-age-stage variants (slide-dots on the card). Empty = single-age.
+    variants: list[CharacterVariant] = Field(default_factory=list)

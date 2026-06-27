@@ -37,7 +37,8 @@ def _slug(name: str) -> str:
 class Project:
     title: str
     root: Path
-    source_pdf: str
+    source_pdf: str          # path to the source book file (any supported format)
+    author: str = ""
 
     @property
     def registry_file(self) -> Path:
@@ -139,12 +140,13 @@ def list_projects() -> list[dict]:
             except (OSError, json.JSONDecodeError):
                 count = 0
         cover = meta.parent / "cover.png"
-        src_pdf = data.get("source_pdf", "")
+        src_pdf = data.get("source_file") or data.get("source_pdf", "")
         if not cover.exists() and src_pdf:
             from app.services import pdf_service
             pdf_service.render_cover(src_pdf, cover)   # cached on first view
         out.append({
             "title": data.get("title", meta.parent.name),
+            "author": data.get("author", ""),
             "source_pdf": src_pdf,
             "root": str(meta.parent),
             "character_count": count,
@@ -163,14 +165,175 @@ def open_project(pdf_path: str | Path) -> Project:
         (root / sub).mkdir(parents=True, exist_ok=True)
 
     meta = root / "project.json"
+    author = ""
     if not meta.exists():
         meta.write_text(
-            json.dumps({"title": title, "source_pdf": str(pdf)}, indent=2),
+            json.dumps({"title": title, "source_file": str(pdf)}, indent=2),
             encoding="utf-8",
         )
-    _active = Project(title=title, root=root, source_pdf=str(pdf))
+    else:                                    # reopen: carry stored title/author
+        try:
+            data = json.loads(meta.read_text(encoding="utf-8"))
+            title = data.get("title", title)
+            author = data.get("author", "")
+        except (OSError, json.JSONDecodeError):
+            pass
+    _active = Project(title=title, root=root, source_pdf=str(pdf), author=author)
     logger.info("Project active: %s", root)
     return _active
+
+
+def project_id_for(title: str) -> str:
+    """The folder name (slug) a project with this title would use."""
+    return _slug(title)
+
+
+def activate(project_id: str) -> Project:
+    """Make an existing project active by its folder id (no slug re-derivation).
+
+    Unlike open_project (which derives the folder from a source path), this opens
+    the exact folder, so projects whose title-slug differs from the source
+    filename are reopened correctly.
+    """
+    global _active
+    root = CONFIG.projects_root / project_id
+    meta = root / "project.json"
+    if not meta.exists():
+        raise FileNotFoundError(f"Project not found: {project_id}")
+    data = json.loads(meta.read_text(encoding="utf-8"))
+    _active = Project(
+        title=data.get("title", project_id),
+        root=root,
+        source_pdf=data.get("source_file") or data.get("source_pdf", ""),
+        author=data.get("author", ""),
+    )
+    logger.info("Project active: %s", root)
+    return _active
+
+
+def create_project(src_path: str | Path, title: str, author: str = "",
+                   subtitle: str = "", cover_src: str | Path | None = None) -> Project:
+    """Create a project from a chosen book file with user-confirmed metadata.
+
+    Copies the source into source/, writes project.json (title/author/subtitle/
+    source_file), and sets cover.png from `cover_src` (a user-supplied image) or
+    by rendering/extracting the book's own cover. Makes the project active.
+    """
+    global _active
+    import shutil
+
+    src = Path(src_path)
+    slug = _slug(title or src.stem)
+    root = CONFIG.projects_root / slug
+    for sub in ("registry", "style", "renders/portraits", "source", "analysis"):
+        (root / sub).mkdir(parents=True, exist_ok=True)
+
+    # keep the original next to the project so re-detect works after restarts
+    src_dst = root / "source" / src.name
+    if src.exists() and not src_dst.exists():
+        shutil.copy2(src, src_dst)
+
+    (root / "project.json").write_text(
+        json.dumps({
+            "title": title or src.stem,
+            "author": author,
+            "subtitle": subtitle,
+            "source_file": str(src_dst if src_dst.exists() else src),
+        }, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+
+    cover = root / "cover.png"
+    if cover_src:
+        try:
+            from PIL import Image
+            Image.open(cover_src).convert("RGB").save(cover, "PNG")
+        except Exception:  # noqa: BLE001
+            shutil.copy2(cover_src, cover)
+    elif not cover.exists():
+        from app.services import pdf_service
+        pdf_service.render_cover(str(src_dst if src_dst.exists() else src), cover)
+
+    _active = Project(title=title or src.stem, root=root,
+                      source_pdf=str(src_dst if src_dst.exists() else src), author=author)
+    logger.info("Project created: %s", root)
+    return _active
+
+
+def update_meta(project_id: str, *, title: str | None = None,
+                author: str | None = None, subtitle: str | None = None) -> dict:
+    """Edit project.json fields (the folder id / slug stays stable so media URLs
+    and references don't break). Returns the updated metadata."""
+    root = CONFIG.projects_root / project_id
+    meta = root / "project.json"
+    if not meta.exists():
+        raise FileNotFoundError(project_id)
+    data = json.loads(meta.read_text(encoding="utf-8"))
+    if title is not None:
+        data["title"] = title
+    if author is not None:
+        data["author"] = author
+    if subtitle is not None:
+        data["subtitle"] = subtitle
+    meta.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+    if _active is not None and _active.root.name == project_id:   # keep active in sync
+        _active.title = data.get("title", _active.title)
+        _active.author = data.get("author", _active.author)
+    return data
+
+
+def set_cover(project_id: str, image_src: str | Path) -> Path:
+    """Replace a project's cover.png from a user-supplied image."""
+    import shutil
+
+    root = CONFIG.projects_root / project_id
+    if not (root / "project.json").exists():
+        raise FileNotFoundError(project_id)
+    cover = root / "cover.png"
+    try:
+        from PIL import Image
+        Image.open(image_src).convert("RGB").save(cover, "PNG")
+    except Exception:  # noqa: BLE001
+        shutil.copy2(image_src, cover)
+    return cover
+
+
+def delete_project(project_id: str) -> None:
+    """Permanently remove a project folder. Clears it as active if needed."""
+    import shutil
+
+    root = CONFIG.projects_root / project_id
+    if not root.exists():
+        raise FileNotFoundError(project_id)
+    if _active is not None and _active.root.name == project_id:
+        set_active(None)
+    shutil.rmtree(root, ignore_errors=True)
+
+
+def duplicate_project(project_id: str) -> str:
+    """Copy a project folder to a new unique slug (title gets a "(copy)" suffix).
+    Returns the new project id."""
+    import shutil
+
+    root = CONFIG.projects_root / project_id
+    meta_path = root / "project.json"
+    if not meta_path.exists():
+        raise FileNotFoundError(project_id)
+    data = json.loads(meta_path.read_text(encoding="utf-8"))
+    base = data.get("title", project_id)
+    title = f"{base} (copy)"
+    slug = _slug(title)
+    n = 2
+    while (CONFIG.projects_root / slug).exists():
+        title = f"{base} (copy {n})"
+        slug = _slug(title)
+        n += 1
+    dst = CONFIG.projects_root / slug
+    shutil.copytree(root, dst)
+    data["title"] = title
+    (dst / "project.json").write_text(
+        json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+    return slug
 
 
 def import_character_voice(project: Project, character_id: str, src_audio: str | Path) -> str:

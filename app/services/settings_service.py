@@ -10,18 +10,23 @@ import json
 import logging
 from pathlib import Path
 
-from app.core.config import CONFIG, PROJECT_ROOT
+from app.core.config import CONFIG, DATA_ROOT
 
 logger = logging.getLogger(__name__)
 
-SETTINGS_FILE = PROJECT_ROOT / "settings.json"
+SETTINGS_FILE = DATA_ROOT / "settings.json"
 
 # (section, label, CONFIG dotted-path, kind, choices)
 FIELDS: list[tuple] = [
-    ("LLM", "Backend", "ollama.backend", "choice", ["ollama", "openai"]),
-    ("LLM", "Ollama URL", "ollama.base_url", "str", None),
-    ("LLM", "Ollama model", "ollama.model", "str", None),
-    ("LLM", "API base URL (OpenRouter/vLLM/…)", "ollama.api_base_url", "str", None),
+    # The LLM section is rendered by a custom panel in the web UI; these entries
+    # exist so the values still load/save through settings_service.
+    ("LLM", "Backend", "ollama.backend", "choice", ["local", "cloud"]),
+    ("LLM", "Local provider", "ollama.local_provider", "choice", ["ollama", "lmstudio"]),
+    ("LLM", "Local URL", "ollama.base_url", "str", None),
+    ("LLM", "Local model", "ollama.model", "str", None),
+    ("LLM", "Cloud provider", "ollama.cloud_provider", "choice",
+     ["openrouter", "openai", "anthropic", "groq", "together", "custom"]),
+    ("LLM", "API base URL", "ollama.api_base_url", "str", None),
     ("LLM", "API key", "ollama.api_key", "password", None),
     ("LLM", "API model", "ollama.api_model", "str", None),
     ("LLM", "Temperature", "ollama.temperature", "float", None),
@@ -31,10 +36,10 @@ FIELDS: list[tuple] = [
     ("ComfyUI", "Parallel instances", "comfy.parallel", "int", None),
     ("ComfyUI", "App manages ComfyUI", "comfy.manage_process", "bool", None),
 
-    ("Workflows", "Portrait workflow", "comfy.portrait_workflow", "str", None),
-    ("Workflows", "Voice-design workflow", "comfy.voicedesign_workflow", "str", None),
-    ("Workflows", "TTS workflow", "comfy.tts_workflow", "str", None),
-    ("Workflows", "SFX/Audio workflow", "comfy.audio_workflow", "str", None),
+    ("Workflows", "Portrait workflow", "comfy.portrait_workflow", "workflow", None),
+    ("Workflows", "Voice-design workflow", "comfy.voicedesign_workflow", "workflow", None),
+    ("Workflows", "Voice-clone / TTS workflow", "comfy.tts_workflow", "workflow", None),
+    ("Workflows", "SFX/Audio workflow", "comfy.audio_workflow", "workflow", None),
 
     ("Audio / Mix", "Gap — same speaker (ms)", "tts.chapter_gap_same_ms", "int", None),
     ("Audio / Mix", "Gap — speaker change (ms)", "tts.chapter_gap_turn_ms", "int", None),
@@ -56,7 +61,9 @@ FIELDS: list[tuple] = [
     ("Voice", "Design accent", "tts.design_accent", "choice",
      ["British English", "American English", "Australian English", "Irish English",
       "Scottish English", "Canadian English", "neutral English"]),
-    ("Voice", "Design language", "tts.design_language", "choice", ["English", "Chinese"]),
+    ("Voice", "Design language", "tts.design_language", "choice",
+     ["English", "Chinese", "Japanese", "Korean", "German", "French",
+      "Russian", "Portuguese", "Spanish", "Italian"]),
     ("Voice", "Optimize loudness target (LUFS)", "tts.voice_norm_lufs", "float", None),
     ("Voice", "Optimize true-peak (dBTP)", "tts.voice_norm_tp", "float", None),
     ("Voice", "Optimize de-ess (0=off..1)", "tts.voice_deess", "float", None),
@@ -85,6 +92,9 @@ FIELDS: list[tuple] = [
     ("Extraction", "Chunk overlap (chars)", "extraction.chunk_overlap_chars", "int", None),
     ("Extraction", "Web results", "extraction.web_results", "int", None),
     ("Extraction", "Enrich top-N online", "extraction.web_enrich_top_n", "int", None),
+
+    ("Timeline", "Show clip waveforms", "ui.show_waveforms", "bool", None),
+    ("Timeline", "Waveform opacity (%)", "ui.waveform_opacity", "int", None),
 
     ("Portrait", "Art style", "portrait_style.art_style", "str", None),
     ("Portrait", "Negative prompt", "portrait_style.negative_prompt", "str", None),
@@ -146,6 +156,17 @@ def load_and_apply() -> None:
             _set(path, val)
         except Exception:  # noqa: BLE001
             logger.debug("skip setting %s", path, exc_info=True)
+    _migrate_backend()
+
+
+def _migrate_backend() -> None:
+    """Map legacy backend names onto the new local/cloud structure."""
+    b = CONFIG.ollama.backend
+    if b == "ollama":
+        CONFIG.ollama.backend = "local"
+        CONFIG.ollama.local_provider = "ollama"
+    elif b == "openai":
+        CONFIG.ollama.backend = "cloud"
 
 
 def save(values: dict) -> None:

@@ -1,72 +1,189 @@
-# Book2AudioDrama
+# Book2AudioDrama (AudioBookGen)
 
-Local-first Windows desktop app that turns a German book PDF into an automated
-audio drama: it extracts the cast, designs/clones voices, generates character
-portraits, and (planned) renders expressive TTS, SFX/music, mixing and export.
+Local-first Windows desktop app that turns a book (PDF / EPUB / TXT / DOCX) into
+an automated **audio drama**: it extracts the cast, designs/clones voices,
+generates portraits, plans an expressive per-line script, renders TTS + ambience
++ SFX, mixes everything on an editable **timeline**, and exports a tagged
+audiobook.
 
-Everything runs **locally** — Ollama for the LLM, ComfyUI as the render backend
-for image/voice models. No cloud APIs are required (optional web search aside).
+Everything runs **locally** — Ollama (or any local/cloud OpenAI-compatible API)
+for the LLM, ComfyUI as the render backend for image/voice/audio models. No
+cloud APIs are required (an optional cloud LLM and opt-in web search aside).
+
+> **Big picture for a new contributor:** the UI was reworked from PySide6 to a
+> **web stack** — a React/Electron frontend talking to a **FastAPI sidecar** that
+> wraps the existing Python pipeline. The old PySide6 UI (`app/ui/`, `app/main.py`)
+> still exists and runs, but the **web UI is the active product**. See
+> [DEV_WEB.md](DEV_WEB.md) to run it and [BUILD.md](BUILD.md) to package it.
 
 ---
 
-## Status
+## Architecture (current)
 
-### Working today
-- **Dashboard** — lists stored projects (title + character count), open / create.
-- **Character extraction** — PDF → cleaned text → chunked → LLM map pass →
-  code-side merge → **speaking-role cast** with role, gender/age guess, voice
-  hint, appearance description. Streams cards live while reading.
-- **Per-book projects** — each book gets its own folder with everything in it
-  (source, analysis, registry, style bible, portraits, voices).
-- **Style Bible** — one LLM pass derives a consistent, book-fitting visual style
-  (genre, palette, casting, wardrobe, backgrounds) used across all portraits.
-- **Character portraits** — Z-Image Turbo via ComfyUI. Per-character LLM-written
-  prompts (varied clothing/background) wrapped in a *fixed* style block so the
-  whole cast looks consistent. Live sampler progress.
-- **Voices**
-  - **Drag-and-drop** an audio file (wav/mp3/ogg/flac/m4a) onto a character card
-    → copied into the project, set as that character's voice.
-  - **Generate** — Qwen3 voice designer creates a voice from the character
-    profile (2-step: Qwen designs the timbre → Higgs speaks German).
-  - **Play/Stop** — Higgs renders a ~15 s German preview (clones the voice),
-    played in-app.
-- **Lean per-stage ComfyUI** — the app launches ComfyUI headless with only the
-  custom nodes a stage needs, and unloads Ollama first, so the 24 GB GPU is
-  never shared. Closing the app stops ComfyUI.
-- **Optional web search** (DuckDuckGo, opt-in) to enrich style + character looks.
+```
+┌─ Electron shell (electron/) ────────────────────────────────┐
+│  React + TS + Vite + Tailwind frontend (frontend/)          │
+│   • shell: sidebar nav, top status bar, bottom queue strip  │
+│   • screens: Dashboard, Characters, Chapters, Settings      │
+│   • timeline editor, tag editor, voice-design popup         │
+│        │ REST (CRUD) + WebSocket /ws/jobs (progress)        │
+│  ┌─────▼──────────────────────────────────────────────────┐ │
+│  │ FastAPI sidecar (server/) — thin layer over app/*      │ │
+│  │   routers/ + jobs.py (async job runner, replaces Qt)   │ │
+│  │   serves project media (covers, portraits, audio)      │ │
+│  └────────────────────────────────────────────────────────┘ │
+│       app/services/* + app/schemas/* (reused unchanged)      │
+└──────────────────────────────────────────────────────────────┘
+        ↓ HTTP                         ↓ HTTP
+     Ollama / cloud LLM            ComfyUI (render backend)
+```
 
-### Not yet built
-- Pass-4 (LLM writes per-line delivery metadata) and scene/chapter TTS rendering
-- SFX / music generation wired into the pipeline (Stable Audio 3 workflow ready)
-- Mixing, mastering, export (WAV/MP3/M4B)
-- Chapter covers screen, Settings/Diagnostics screens, QC dashboard
+- **`app/`** — the Python pipeline. `services/` and `schemas/` are UI-agnostic and
+  shared by both the old Qt UI and the new sidecar. `app/workers/` (QThread) is
+  **superseded** by `server/jobs.py` for the web UI.
+- **`server/`** — FastAPI bridge. Routers wrap services; `jobs.py` runs blocking
+  pipeline calls on a thread pool and streams progress over `/ws/jobs`.
+- **`frontend/`** — the React app (the real UI).
+- **`electron/`** — desktop shell: spawns the sidecar, hosts the frontend,
+  provides native file/folder dialogs, bundles ffmpeg.
+
+### Source map
+```
+app/
+  core/config.py          all settings (UIConfig, OllamaConfig, TTSConfig, …)
+  schemas/                pydantic models (single source of truth)
+    characters.py         Character (+ CharacterVariant for age stages)
+    script.py             Chapter, LineItem (+ origin/pitch), SfxCue (+ fades/custom)
+    voice.py              Delivery (Higgs enum-locked), Voice
+    timeline.py           Timeline + TimelineSegment (the WYSIWYG edit model)
+    style.py              StyleBible
+  services/
+    pdf_service.py        multi-format extract (pdf/epub/docx/txt) + cover + chunk
+    book_meta.py          embedded title/author/cover; chapter MP3 tagging
+    ollama_service.py     LLM client: local (Ollama) OR cloud (OpenAI-compatible)
+    cost_service.py       token-cost estimate from the active model's pricing
+    character_service.py  map -> merge -> roles -> descriptions; age-variant split
+    story_service.py      chapter-centric extraction orchestrator
+    chapter_service.py    chapter detect + persistence (analysis/chapters/)
+    chapter_brief.py      per-chapter summary + location (1 LLM call)
+    line_planner.py       prose -> ordered LineItems (speaker, delivery)
+    chapter_render.py     render lines -> mix (gaps/sfx/ambience/pitch) -> master
+    timeline_service.py   derive/persist timeline.json; build mix FROM it (WYSIWYG)
+    ambience.py / sfx_planner.py / music_planner.py / sound_service.py
+    voice_design.py       Qwen3 voice designer; compose_description (full controls)
+    voice_optimize.py     optional denoise/normalize (torch libs; degrades if absent)
+    portrait_service.py   Z-Image prompt build + render
+    comfy_service.py      ComfyUI API client (fill workflow, WS progress, fetch)
+    comfy_launcher.py     lean per-stage ComfyUI process manager
+    project_service.py    per-book folders, create/open/activate, save/load
+    audiobook_export.py   export tagged MP3s + cover to a folder
+    tts/                  TTSEngine protocol + Higgs engine + tag_builder
+  workers/                LEGACY QThread workers (used only by the old Qt UI)
+  ui/                     LEGACY PySide6 UI (app/main.py)
+server/
+  main.py                 FastAPI app (port 8765)
+  jobs.py                 JobManager + JobContext + /ws/jobs hub
+  extraction.py           extraction pipeline as a job (step events for the popup)
+  rendering.py            chapter render / produce-all / export / timeline render jobs
+  routers/                health, projects, ingest, characters, chapters, settings, media, jobs
+frontend/                 React + Vite + TS + Tailwind (src/app, src/screens, src/lib)
+electron/                 main.cjs, preload.cjs, ffmpeg/ (bundled), package.json (electron-builder)
+build/                    sidecar.spec (PyInstaller), build_installer.ps1
+prompts/                  versioned prompt text files
+workflows/                ComfyUI API-format graphs with {placeholders}
+projects/<book-slug>/     per-book data (created at runtime; gitignored)
+```
+
+---
+
+## What works today (web UI)
+
+- **Dashboard** — project grid (cover/title/author/char count); **New AudioDrama**
+  flow: pick a pdf/epub/txt/docx → confirm dialog with **editable cover/title/author**
+  → animated-step **extraction popup** → lands in project view.
+- **Characters** — **ID-card** redesign. Per-character: portrait, role badge,
+  gender/age, vocal-trait chips, voice row (play / upload-to-clone / design).
+  **Age variants** (`CharacterVariant`) show as **slide-dots** that swap
+  portrait + description + voice; full manual edit modal (incl. adding ages).
+- **Voice design popup** — clicking **Design** opens a Qwen3-style visual editor:
+  Gender / Age / Pitch / Speed / Energy / Emotion / Style / Language (10) /
+  Timbre (multi) / Accent, with a live `OUT >` preview and an **editable free-form
+  prompt** (Qwen voice design is natural-language driven). Tweak → regenerate.
+- **Chapters**
+  - **Editable script as a tag editor** — select words → popup to set **emotion /
+    style** and **assign a voice** (existing character, or a shared **Default
+    male/female** voice with a **pitch** offset for unnamed one-off speakers).
+    Partial selections **split** the line into their own segment; clearing tags
+    **re-merges** back to the original sentence. Hover a line → **+ SFX** (drag an
+    audio file or type a prompt to generate).
+  - **Per-chapter summary + location** header (1 LLM call).
+  - **Open timeline editor** → full-window **WYSIWYG timeline**: lanes (bottom→top)
+    narrator, speaker, ambient, sfx, **music**; **play/pause + seek bar + scrubbable
+    playhead**; **waveforms** (~25%, toggle + opacity in Settings); clips are
+    **selectable, drag-to-move, editable** (prompt/gain/fades/duration),
+    **regenerate** (ambient/sfx/music) / **delete** / **add**. All edits persist to
+    `timeline.json` and the mix is rebuilt from it (`Re-render from timeline`).
+- **Render / produce / export** — per-chapter or all-chapters render with modes
+  (full / continue / voices / mix / …); export tagged MP3s + cover to a folder.
+- **Settings** — bottom-left, left-nav sections. **LLM section is a custom panel**:
+  **Local** (Ollama / LM Studio, with an installed-model dropdown) or **Cloud API**
+  (OpenRouter / OpenAI / Anthropic / Groq / Together / custom, with a **searchable
+  model picker showing price + cheap/medium/expensive tier**).
+- **Token-cost estimates** — every LLM job shows an estimate in the queue strip
+  (`free` for local; `~$X` for cloud, from the model's pricing).
+- **Lean per-stage ComfyUI** — launches headless with only the nodes a stage needs,
+  unloads Ollama first so the GPU is never shared; stops on app close.
+
+---
+
+## Run (development)
+
+Two terminals (see [DEV_WEB.md](DEV_WEB.md)):
+
+```bash
+python -m server.main                 # FastAPI sidecar on http://127.0.0.1:8765
+cd frontend && npm install && npm run dev   # Vite on http://localhost:5173 (proxies /api + /ws)
+```
+
+Open http://localhost:5173. Or run the desktop shell:
+
+```bash
+cd frontend && npm run build
+cd ../electron && npm install && npm run dev   # spawns the sidecar + opens the window
+```
+
+The legacy Qt UI still runs via `run_app.bat` (`python -m app.main`).
+
+## Build the installer (.exe)
+
+```powershell
+build_installer.bat        # or: powershell -File build/build_installer.ps1
+```
+
+Produces `installer/AudioBookGen-Setup-<ver>.exe` (self-contained: frozen
+FastAPI sidecar + frontend + prompts/workflows + bundled ffmpeg; no system
+Python needed). See [BUILD.md](BUILD.md). Notes:
+- The PyInstaller spec (`build/sidecar.spec`) **excludes the heavy ML stack**
+  (torch, transformers, cv2, …) — the sidecar only drives ComfyUI/Ollama over
+  HTTP, so bundling them is unnecessary and blew NSIS's 2 GB mmap limit.
+- Put `ffmpeg.exe`/`ffprobe.exe` in `electron/ffmpeg/` (already done on this
+  machine) — pydub needs ffmpeg for MP3 mixing/export.
 
 ---
 
 ## Requirements
 
-- Windows, Python 3.11 (tested with the user's miniconda env)
-- **Ollama** running at `localhost:11434` with `gemma4:12b` pulled
-- **ComfyUI** portable at `C:\Tools\AI\ComfyUI_windows_portable` with:
-  - `tts_audio_suite` custom nodes (Higgs v3 + Qwen3 designer)
-  - Z-Image Turbo model (`z_image_turbo_bf16.safetensors`) + deps
-  - Stable Audio 3 model (for later SFX/music)
-- Python deps: `pip install -r requirements.txt`
-  (PySide6, pymupdf, httpx, pydantic, websocket-client)
-
-## Run
-
-```
-run_app.bat
-```
-or `python -m app.main` from the project root.
-
-Flow: **Dashboard** → New project (choose PDF) → **Characters** → Test mode (first
-N chunks) → *Extract Characters* → *Generate all portraits* → drop or *Generate*
-a voice per card → ▶ to hear it.
-
-> First portrait/voice render is slow (ComfyUI launch + model load, ~50 s);
-> later ones reuse the warm model (~20 s).
+- Windows, Python 3.11 (tested with miniconda). `pip install -r requirements.txt`
+  (fastapi, uvicorn, python-multipart, pymupdf, ebooklib, python-docx,
+  beautifulsoup4, pillow, httpx, pydantic, pydub, mutagen, …). For building also
+  `pip install pyinstaller`.
+- Node + npm (frontend + electron-builder).
+- **ffmpeg** on PATH (dev) or in `electron/ffmpeg/` (packaged).
+- **LLM**: local **Ollama** at `localhost:11434` (free) **or** a cloud
+  OpenAI-compatible API (set in Settings → LLM). Extraction needs a model with
+  clean structured-output support (`gemma4:12b` is known-good locally).
+- **ComfyUI** portable at `C:\Tools\AI\ComfyUI_windows_portable` with
+  `tts_audio_suite` (Higgs v3 + Qwen3 designer), Z-Image Turbo, Stable Audio 3.
 
 ---
 
@@ -74,69 +191,16 @@ a voice per card → ▶ to hear it.
 
 | Role | Model | Backend |
 |------|-------|---------|
-| LLM extraction / style / prompts | `gemma4:12b` | Ollama |
+| LLM extraction / style / prompts / summaries | `gemma4:12b` (local) or any cloud model | Ollama / OpenAI-compatible API |
 | Character portraits | Z-Image Turbo | ComfyUI (core nodes) |
 | Voice design (timbre) | Qwen3 TTS Voice Designer | ComfyUI (tts_audio_suite) |
 | TTS / voice cloning | Higgs Audio v3 | ComfyUI (tts_audio_suite) |
-| SFX / music (planned) | Stable Audio 3 | ComfyUI (core nodes) |
+| SFX / ambience / music | Stable Audio 3 | ComfyUI (core nodes) |
 
-**Model notes**
-- `gemma4:12b` is the only model that gave clean structured output. The
-  abliterated 26B and Qwen3.6-27B both produced garbage and were rejected
-  (see `memory/`). Uncensored fallback: `gemma-4-12B-it-heretic`.
-- Ollama options that matter: `num_ctx 16384`, `num_predict 8192`,
-  `repeat_penalty 1.3`, `temperature ~0.45`; schema strings are length-capped.
-- **Voice is two-step**: Qwen3 designs an English timbre sample (it only speaks
-  English/Chinese) → Higgs clones it to speak **German**. The accent is German
-  because Higgs produces the German speech.
-
----
-
-## Architecture
-
-```
-app/
-  main.py                 entry point
-  core/
-    config.py             all settings (one place to tweak)
-    prompts.py            prompt-file loader
-  schemas/                pydantic models (single source of truth)
-    characters.py         Character, mentions, enums (gender/age/role)
-    style.py              StyleBible
-    voice.py              Voice, Delivery (Higgs enum-locked)
-  services/
-    pdf_service.py        extract + chunk
-    ollama_service.py     LLM client (structured outputs, retries, unload)
-    character_service.py  map -> code-merge -> roles -> descriptions, web enrich
-    style_service.py      Style Bible generation
-    research_service.py   DuckDuckGo (opt-in)
-    portrait_service.py   Z-Image prompt build + render
-    voice_design.py       Qwen3 voice designer (provider)
-    comfy_service.py      ComfyUI API client (fill workflow, WS progress, fetch)
-    comfy_launcher.py     lean per-stage ComfyUI process manager
-    project_service.py    per-book folders, save/load, list
-    tts/
-      base.py             TTSEngine protocol  <- swap point
-      tag_builder.py      Delivery -> Higgs <|...|> tokens
-      higgs.py            HiggsTTSEngine
-      registry.py         get_engine(name)
-  workers/                QThread workers (extract, portrait, batch, tts, design)
-  ui/                     dashboard, characters screen, character card, flow
-prompts/                  versioned prompt + rewriter text files
-workflows/                ComfyUI API-format graphs with {placeholders}
-projects/<book-slug>/     per-book data (created at runtime)
-memory/                   cross-session notes (model choice, etc.)
-```
-
-### Modularity (swap points)
-- **TTS engine** — implement `tts/base.TTSEngine`, register in `tts/registry.py`,
-  set `CONFIG.tts.engine`. Higgs is the only knower of its tag syntax
-  (`tag_builder.py`).
-- **Voice design** — `voice_design.py` is a separate provider; workflow name in
-  config.
-- **ComfyUI graphs** — live in `workflows/*.json` with `{placeholders}`; change
-  nodes without touching code. Stage → custom-node whitelist in `config.py`.
-- **Prompts** — all in `prompts/*.txt`, loaded by name, versioned in a header.
+**Voice is two-step**: Qwen3 designs a timbre sample → Higgs clones it to speak
+**German**. The voice-design popup exposes Qwen's full natural-language control
+surface (timbre, prosody, emotion, persona, gender, age, accent, pacing, energy,
+language); the final spoken language still comes from the Higgs stage.
 
 ---
 
@@ -144,13 +208,20 @@ memory/                   cross-session notes (model choice, etc.)
 
 ```
 projects/<book-slug>/
-  project.json            title + source path
-  source/                 copy of the PDF
-  analysis/               mentions.json, grouped.json, registry.json (QC)
-  registry/characters.json   the cast (with voice assignments + portrait paths)
+  project.json                 title, author, subtitle, source_file
+  cover.png
+  source/                      copy of the book file
+  analysis/
+    mentions.json, grouped.json, registry.json   (extraction QC)
+    chapters/<id>.json         Chapter (text, lines, summary, location, curated)
+    chapters/<id>.timeline.json  derived/edited WYSIWYG timeline
+    chapters/index.json
+  registry/characters.json     the cast (variants, voice assignments, portraits)
   style/style_bible.json
-  renders/portraits/<character_id>.png  (+ .json prompt sidecar)
-  voices/<character_id>.<ext>           assigned/designed voice sample
+  renders/portraits/<id>.png   (+ .json prompt sidecar)
+  renders/tts/<chapter>/<line>.mp3
+  voices/<id>.mp3, <id>_preview.mp3
+  mixes/chapters/<id>.mp3 | ambience/ | sfx/ | music/ | timeline/
 ```
 
 ---
@@ -159,14 +230,34 @@ projects/<book-slug>/
 
 Extraction reads the whole book but the registry is built spoiler-light at the
 source (firewall prompts forbid plot/fate/reveals); only names, roles, voice and
-neutral appearance are surfaced. Web enrichment uses snippets only and the same
-firewall.
+neutral appearance are surfaced. Web enrichment uses snippets only.
 
 ---
 
-## Key references
+## Known caveats / next steps
 
-- Engine prompting contracts (Higgs tags, Ideogram/Z-Image, Stable Audio): see
-  `PLAN.txt` Appendices A & B.
-- Per-engine ComfyUI launchers: `C:\Tools\AI\ComfyUI_windows_portable\workflow_launchers\`
-  (`run_Ideogram.bat`, `run_StableAudio.bat`, `run_TTS.bat`).
+- **ffmpeg is required** at runtime (pydub MP3 ops). On PATH in dev; bundled in
+  the installer.
+- **voice-optimize** (Demucs/DeepFilterNet/VoiceFixer denoise) is torch-based and
+  is **excluded from the packaged sidecar** — it degrades gracefully (skips).
+- **GPU steps need ComfyUI running** (portrait/voice/TTS/ambience/SFX). The
+  non-GPU paths (extraction with a cloud LLM, script/tag editing, timeline
+  arrange, mix-only render, export) work without it.
+- **Web search is off by default and intentionally so.** `research_service.py`
+  scrapes DuckDuckGo's HTML endpoint (snippets only — it never visits target
+  sites). DDG rate-limits the scraper after ~7 rapid queries (HTTP 202 + empty),
+  so a full enrichment run silently gets nothing for its back half; it fails
+  soft (returns `[]`), the pipeline falls back to LLM-only inference. Leave it
+  off; if real web context is wanted, point `research_service.search()` at a
+  self-hosted **SearXNG** (`/search?format=json`, local + no key) or a keyed API
+  (Tavily/Brave) rather than the raw DDG scrape.
+- The **legacy PySide6 UI** (`app/ui/`, `app/workers/`) is kept but no longer the
+  focus; new work goes through `server/` + `frontend/`.
+- Animated `.webp` assets for the extraction-popup steps are placeholders
+  (`frontend/public/steps/<key>.webp` slots) until provided.
+
+## Key references
+- [DEV_WEB.md](DEV_WEB.md) — run the web stack. [BUILD.md](BUILD.md) — package it.
+- `PLAN.txt` — original product spec + engine prompting contracts (Appendices A/B).
+- Latest rework plan: `~/.claude/plans/so-the-new-ui-tidy-comet.md`.
+- `memory/` — cross-session notes (model choices, etc.).

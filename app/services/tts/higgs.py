@@ -32,20 +32,27 @@ class HiggsTTSEngine:
     name = "higgs_v3"
 
     def synthesize(self, request: TTSRequest, on_step=None) -> Path:
-        text = tag_builder.build_higgs_text(request.text, request.delivery)
+        workflow = request.workflow or CONFIG.comfy.tts_workflow
+        style = tag_builder.tag_style_for_workflow(workflow)
+        text = tag_builder.build_text(request.text, request.delivery, style)
         ref_name, ref_path = self._ensure_reference(request.voice)
         out = request.out_path or (CONFIG.comfy.comfy_dir / "tts_out.mp3")
         out.parent.mkdir(parents=True, exist_ok=True)
 
+        # Superset of placeholders so any clone workflow (Higgs / OmniVoice) fills
+        # what it needs. OmniVoice's CharacterVoicesNode wants the reference
+        # clip's transcript ({reference_text}); Higgs ignores the extra key.
         replacements: dict[str, object] = {
             "{tts_text}": text,
+            "{text}": text,
             "{reference_audio}": ref_name,
+            "{reference_text}": (request.voice.ref_text if request.voice else "") or "",
             "{filename_prefix}": f"b2ad/{out.stem}",
             "{seed}": request.seed or random.randint(0, 2**31 - 1),
         }
         try:
             comfy_service.run_workflow(
-                CONFIG.comfy.tts_workflow, replacements, out, on_step=on_step,
+                workflow, replacements, out, on_step=on_step,
                 timeout=CONFIG.comfy.tts_timeout_s,
             )
         finally:

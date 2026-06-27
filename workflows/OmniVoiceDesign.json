@@ -1,0 +1,52 @@
+{
+  "1": {
+    "inputs": {
+      "model_variant": "OmniVoice",
+      "device": "auto",
+      "language": "Auto",
+      "num_step": 32,
+      "guidance_scale": 2,
+      "t_shift": 0.1,
+      "speed": 1,
+      "duration": 0,
+      "dtype": "auto",
+      "instruct": "{voice_description}",
+      "layer_penalty_factor": 5,
+      "position_temperature": 5,
+      "class_temperature": 0,
+      "denoise": true,
+      "preprocess_prompt": true,
+      "postprocess_output": false,
+      "audio_chunk_duration": 15,
+      "audio_chunk_threshold": 30
+    },
+    "class_type": "OmniVoiceEngineNode",
+    "_meta": { "title": "⚙️ OmniVoice Engine" }
+  },
+  "2": {
+    "inputs": {
+      "text": "{reference_text}",
+      "narrator_voice": "none",
+      "seed": "{seed}",
+      "enable_chunking": true,
+      "max_chars_per_chunk": 400,
+      "chunk_combination_method": "crossfade",
+      "silence_between_chunks_ms": 100,
+      "enable_audio_cache": true,
+      "batch_size": 0,
+      "TTS_engine": ["1", 0]
+    },
+    "class_type": "UnifiedTTSTextNode",
+    "_meta": { "title": "🎤 TTS Text" }
+  },
+  "3": {
+    "inputs": {
+      "filename_prefix": "{filename_prefix}",
+      "quality": "V0",
+      "audioUI": "",
+      "audio": ["2", 0]
+    },
+    "class_type": "SaveAudioMP3",
+    "_meta": { "title": "Save Audio (MP3)" }
+  }
+}

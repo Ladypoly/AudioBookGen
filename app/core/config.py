@@ -6,11 +6,23 @@ defaults; later this is backed by SQLite settings + the Settings screen.
 
 from __future__ import annotations
 
+import os
 from dataclasses import dataclass, field
 from pathlib import Path
 
+# Source-tree root. In a packaged build (PyInstaller) the bundled read-only
+# assets (prompts/, workflows/) live next to the sidecar exe, and user-writable
+# data (projects/, settings.json) lives in a per-user folder. Both are pointed
+# at via env vars set by the Electron shell; unset, everything stays relative to
+# the source tree (the dev / PySide6 behaviour is unchanged).
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-PROMPTS_DIR = PROJECT_ROOT / "prompts"
+
+# Read-only bundled assets (prompts, workflows).
+ASSET_ROOT = Path(os.environ["ABG_ASSET_ROOT"]) if os.environ.get("ABG_ASSET_ROOT") else PROJECT_ROOT
+# User-writable data (projects, settings).
+DATA_ROOT = Path(os.environ["ABG_DATA_ROOT"]) if os.environ.get("ABG_DATA_ROOT") else PROJECT_ROOT
+
+PROMPTS_DIR = ASSET_ROOT / "prompts"
 
 
 @dataclass
@@ -18,12 +30,19 @@ class OllamaConfig:
     """LLM backend settings. `backend` selects local Ollama or any
     OpenAI-compatible HTTP API (OpenRouter, vLLM, LM Studio, …)."""
 
-    backend: str = "ollama"                 # "ollama" | "openai"
-    # OpenAI-compatible API (used when backend == "openai").
+    # "local" = an on-machine server (Ollama or LM Studio); "cloud" = a hosted
+    # OpenAI-compatible API (OpenRouter, OpenAI, Anthropic, Groq, Together, …).
+    backend: str = "local"                  # "local" | "cloud"
+    # Local sub-provider: "ollama" (native /api) or "lmstudio" (OpenAI /v1).
+    local_provider: str = "ollama"
+    # Cloud sub-provider (drives api_base_url); "custom" lets the URL be edited.
+    cloud_provider: str = "openrouter"      # openrouter|openai|anthropic|groq|together|custom
+    # Cloud OpenAI-compatible API (used when backend == "cloud").
     api_base_url: str = "https://openrouter.ai/api/v1"
     api_key: str = ""
     api_model: str = "google/gemma-2-27b-it"
 
+    # Local server base URL (Ollama 11434 / LM Studio 1234).
     base_url: str = "http://localhost:11434"
     # 3-way tested on a real chunk: gemma4:12b = clean; abliterated-26B = "t_t_t"
     # garbage; Qwen3.6-27B = hallucinated "@Kai", missed everyone. So 12b stays.
@@ -263,6 +282,14 @@ class ExportConfig:
 
 
 @dataclass
+class UIConfig:
+    """Editor / display preferences."""
+
+    show_waveforms: bool = True       # draw clip waveforms in the timeline
+    waveform_opacity: int = 25        # 0..100 %
+
+
+@dataclass
 class AppConfig:
     ollama: OllamaConfig = field(default_factory=OllamaConfig)
     extraction: ExtractionConfig = field(default_factory=ExtractionConfig)
@@ -270,11 +297,12 @@ class AppConfig:
     tts: TTSConfig = field(default_factory=TTSConfig)
     export: ExportConfig = field(default_factory=ExportConfig)
     portrait_style: PortraitStyle = field(default_factory=PortraitStyle)
+    ui: UIConfig = field(default_factory=UIConfig)
     prompts_dir: Path = PROMPTS_DIR
-    workflows_dir: Path = PROJECT_ROOT / "workflows"
-    portraits_dir: Path = PROJECT_ROOT / "renders" / "portraits"
+    workflows_dir: Path = ASSET_ROOT / "workflows"
+    portraits_dir: Path = DATA_ROOT / "renders" / "portraits"
     # Each imported book gets its own folder here with all its data.
-    projects_root: Path = PROJECT_ROOT / "projects"
+    projects_root: Path = DATA_ROOT / "projects"
 
 
 CONFIG = AppConfig()

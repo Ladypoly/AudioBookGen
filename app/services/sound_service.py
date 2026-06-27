@@ -28,10 +28,12 @@ _NEGATIVE = "low quality, distorted, clipping, harsh noise"
 def generate(
     prompt: str, seconds: float, out_path: Path,
     kind: str = "sfx", seed: int | None = None, negative: str = _NEGATIVE,
+    on_step=None,
 ) -> Path:
     """Render one audio clip from a Stable Audio prompt to out_path (mp3).
 
-    A random seed each call, so re-generating ambience/SFX yields a fresh take."""
+    A random seed each call, so re-generating ambience/SFX yields a fresh take.
+    `on_step(value, max)` receives live sampler progress (for a UI progress bar)."""
     seconds = max(1.0, round(float(seconds), 2))
     if seed is None:
         seed = random.randint(0, 2**31 - 1)
@@ -46,6 +48,7 @@ def generate(
             "{filename_prefix}": f"b2ad/{out_path.stem}",
         },
         out_path,
+        on_step=on_step,
         timeout=CONFIG.comfy.audio_timeout_s,
     )
     return out_path

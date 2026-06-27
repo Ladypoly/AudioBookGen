@@ -30,6 +30,28 @@ class OllamaError(RuntimeError):
     """Raised when Ollama cannot return a valid, schema-conforming response."""
 
 
+def use_ollama_proto() -> bool:
+    """True when the active backend speaks Ollama's native /api protocol.
+
+    Everything else (LM Studio, cloud APIs) speaks OpenAI /v1. Legacy values
+    ("ollama"/"openai") are still understood for backward compatibility."""
+    cfg = CONFIG.ollama
+    if cfg.backend in ("local", "ollama"):
+        return getattr(cfg, "local_provider", "ollama") == "ollama" or cfg.backend == "ollama"
+    return False
+
+
+def openai_target() -> tuple[str, str, str]:
+    """(base_url, api_key, model) for the OpenAI-compatible call path.
+
+    Local LM Studio uses the local URL + model and no key; cloud uses the API
+    URL/key/model."""
+    cfg = CONFIG.ollama
+    if cfg.backend == "local":              # lmstudio (ollama handled by proto)
+        return cfg.base_url, "", cfg.model
+    return cfg.api_base_url, cfg.api_key, cfg.api_model
+
+
 def list_ollama_models(base_url: str) -> list[str]:
     """Installed Ollama models (GET /api/tags). [] on failure (e.g. Ollama not
     running) — logged as a single quiet line, never a stack trace."""
@@ -70,7 +92,7 @@ def resolve_num_ctx() -> int:
     The cap guards VRAM: Ollama allocates the whole KV cache up front, so a
     128k/1M window would spill to CPU (very slow) on a normal GPU."""
     cfg = CONFIG.ollama
-    if cfg.backend != "ollama" or not cfg.auto_ctx:
+    if not use_ollama_proto() or not cfg.auto_ctx:
         return cfg.num_ctx
     key = cfg.model
     if key not in _CTX_CACHE:
@@ -130,8 +152,9 @@ def _post_openai(prompt: str, schema_dict: dict) -> str:
     """Call an OpenAI-compatible chat API (OpenRouter, vLLM, LM Studio, …) with
     JSON-schema structured output."""
     cfg = CONFIG.ollama
+    base_url, api_key, model = openai_target()
     payload = {
-        "model": cfg.api_model,
+        "model": model,
         "messages": [{"role": "user", "content": prompt}],
         "temperature": cfg.temperature,
         "response_format": {
@@ -139,8 +162,10 @@ def _post_openai(prompt: str, schema_dict: dict) -> str:
             "json_schema": {"name": "result", "strict": True, "schema": schema_dict},
         },
     }
-    headers = {"Authorization": f"Bearer {cfg.api_key}", "Content-Type": "application/json"}
-    url = f"{cfg.api_base_url.rstrip('/')}/chat/completions"
+    headers = {"Content-Type": "application/json"}
+    if api_key:
+        headers["Authorization"] = f"Bearer {api_key}"
+    url = f"{base_url.rstrip('/')}/chat/completions"
     with httpx.Client(timeout=cfg.request_timeout_s) as client:
         resp = client.post(url, json=payload, headers=headers)
         resp.raise_for_status()
@@ -149,7 +174,7 @@ def _post_openai(prompt: str, schema_dict: dict) -> str:
 
 
 def _post_generate(prompt: str, fmt: object, num_predict: int | None = None) -> str:
-    if CONFIG.ollama.backend == "openai":
+    if not use_ollama_proto():
         return _post_openai(prompt, fmt)   # fmt is schema.model_json_schema()
     cfg = CONFIG.ollama
     payload = {
@@ -226,12 +251,18 @@ def unload() -> bool:
 
 
 def health_check() -> bool:
-    """Return True if the Ollama server responds to /api/tags."""
+    """True if the active LLM backend responds (Ollama /api/tags, else /models)."""
     cfg = CONFIG.ollama
     try:
+        if use_ollama_proto():
+            url = f"{cfg.base_url.rstrip('/')}/api/tags"
+            headers: dict = {}
+        else:
+            base_url, api_key, _ = openai_target()
+            url = f"{base_url.rstrip('/')}/models"
+            headers = {"Authorization": f"Bearer {api_key}"} if api_key else {}
         with httpx.Client(timeout=5.0) as client:
-            resp = client.get(f"{cfg.base_url.rstrip('/')}/api/tags")
-            resp.raise_for_status()
+            client.get(url, headers=headers).raise_for_status()
         return True
     except httpx.HTTPError:
         return False

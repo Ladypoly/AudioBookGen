@@ -1,0 +1,65 @@
+{
+  "name": "audiobookgen-electron",
+  "private": true,
+  "version": "0.1.2",
+  "description": "Electron shell for AudioBookGen — hosts the React frontend and spawns the FastAPI Python sidecar.",
+  "main": "main.cjs",
+  "scripts": {
+    "start": "electron .",
+    "dev": "cross-env ABG_DEV=1 electron .",
+    "pack": "electron-builder --dir",
+    "installer": "electron-builder"
+  },
+  "devDependencies": {
+    "cross-env": "^7.0.3",
+    "electron": "^33.2.0",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "com.audiodramabuilder.app",
+    "productName": "Audio Drama Builder",
+    "directories": {
+      "output": "../installer",
+      "buildResources": "build"
+    },
+    "files": [
+      "main.cjs",
+      "preload.cjs"
+    ],
+    "extraResources": [
+      {
+        "from": "../frontend/dist",
+        "to": "frontend"
+      },
+      {
+        "from": "../dist_sidecar/abg-sidecar",
+        "to": "sidecar"
+      },
+      {
+        "from": "../prompts",
+        "to": "assets/prompts"
+      },
+      {
+        "from": "../workflows",
+        "to": "assets/workflows"
+      },
+      {
+        "from": "ffmpeg",
+        "to": "ffmpeg"
+      }
+    ],
+    "win": {
+      "target": [
+        "nsis"
+      ],
+      "artifactName": "Audio-Drama-Builder-Setup-${version}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    }
+  }
+}

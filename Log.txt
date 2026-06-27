@@ -1,0 +1,768 @@
+Using Python: C:\Users\Elin\miniconda3\python.exe
+
+==> [1/3] Building frontend...
+npm error code ENOENT
+npm error syscall open
+npm error path C:\Tools\AI_Code_Projects\AudioBookGen\package.json
+npm error errno -4058
+npm error enoent Could not read package.json: Error: ENOENT: no such file or directory, open 'C:\Tools\AI_Code_Projects\AudioBookGen\package.json'
+npm error enoent This is related to npm not being able to find a file.
+npm error enoent
+npm error A complete log of this run can be found in: C:\Users\Elin\AppData\Local\npm-cache\_logs\2026-06-26T21_30_58_334Z-debug-0.log
+
+> audiobookgen-frontend@0.1.0 build
+> tsc -b && vite build
+
+vite v6.4.3 building for production...
+✓ 52 modules transformed.
+dist/index.html                   0.41 kB │ gzip:  0.28 kB
+dist/assets/index-D2NCL2R9.css   24.06 kB │ gzip:  5.50 kB
+dist/assets/index-DBaDhYOC.js   222.23 kB │ gzip: 66.41 kB
+✓ built in 483ms
+==> [2/3] Freezing Python sidecar (PyInstaller)...
+568 INFO: PyInstaller: 6.4.0, contrib hooks: 2024.1
+568 INFO: Python: 3.11.4 (conda)
+573 INFO: Platform: Windows-10-10.0.19045-SP0
+9984 INFO: Extending PYTHONPATH with paths
+['C:\\Tools\\AI_Code_Projects\\AudioBookGen\\build',
+ 'C:\\Tools\\AI_Code_Projects']
+pygame 2.6.1 (SDL 2.28.4, Python 3.11.4)
+Hello from the pygame community. https://www.pygame.org/contribute.html
+476 WARNING: discover_hook_directories: Failed to process hook entry point 'EntryPoint(name='hook-dirs', value='rapidfuzz.__pyinstaller:get_hook_dirs', group='pyinstaller40')': AttributeError: module 'rapidfuzz.__pyinstaller' has no attribute 'get_hook_dirs'
+10828 INFO: Appending 'datas' from .spec
+10853 INFO: checking Analysis
+11103 INFO: Building because hiddenimports changed
+11103 INFO: Initializing module dependency graph...
+11104 INFO: Caching module graph hooks...
+11122 INFO: Analyzing base_library.zip ...
+12741 INFO: Loading module hook 'hook-heapq.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\PyInstaller\\hooks'...
+12790 INFO: Loading module hook 'hook-encodings.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\PyInstaller\\hooks'...
+14112 INFO: Loading module hook 'hook-pickle.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\PyInstaller\\hooks'...
+14979 INFO: Caching module dependency graph...
+15067 INFO: Running Analysis Analysis-00.toc
+15067 INFO: Looking for Python shared library...
+15072 INFO: Using Python shared library: C:\Users\Elin\miniconda3\python311.dll
+15072 INFO: Analyzing C:\Tools\AI_Code_Projects\AudioBookGen\build\sidecar_entry.py
+15168 INFO: Loading module hook 'hook-multiprocessing.util.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\PyInstaller\\hooks'...
+15253 INFO: Loading module hook 'hook-xml.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\PyInstaller\\hooks'...
+15723 INFO: Loading module hook 'hook-anyio.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\hooks\\stdhooks'...
+16879 INFO: Loading module hook 'hook-pydantic.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\hooks\\stdhooks'...
+16974 INFO: Loading module hook 'hook-platform.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\PyInstaller\\hooks'...
+17542 INFO: Loading module hook 'hook-pygments.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\PyInstaller\\hooks'...
+19954 INFO: Loading module hook 'hook-IPython.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\hooks\\stdhooks'...
+21251 INFO: Loading module hook 'hook-difflib.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\PyInstaller\\hooks'...
+21443 INFO: Loading module hook 'hook-xml.dom.domreg.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\PyInstaller\\hooks'...
+21588 INFO: Loading module hook 'hook-matplotlib.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\PyInstaller\\hooks'...
+21834 INFO: Loading module hook 'hook-packaging.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\PyInstaller\\hooks'...
+21882 INFO: Loading module hook 'hook-numpy.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\numpy\\_pyinstaller'...
+21925 WARNING: Conda distribution 'numpy', dependency of 'numpy', was not found. If you installed this distribution with pip then you may ignore this warning.
+22295 INFO: Loading module hook 'hook-sysconfig.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\PyInstaller\\hooks'...
+22700 INFO: Loading module hook 'hook-psutil.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\hooks\\stdhooks'...
+23784 INFO: Loading module hook 'hook-PIL.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\PyInstaller\\hooks'...
+23837 INFO: Loading module hook 'hook-PIL.Image.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\PyInstaller\\hooks'...
+24371 INFO: Loading module hook 'hook-xml.etree.cElementTree.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\PyInstaller\\hooks'...
+24579 INFO: Loading module hook 'hook-PIL.ImageFilter.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\PyInstaller\\hooks'...
+25026 INFO: Loading module hook 'hook-jinja2.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\hooks\\stdhooks'...
+25483 INFO: Loading module hook 'hook-matplotlib.backends.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\PyInstaller\\hooks'...
+26164 INFO: Processing pre-safe import module hook six.moves from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\PyInstaller\\hooks\\pre_safe_import_module\\hook-six.moves.py'.
+27072 INFO: Loading module hook 'hook-pandas.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\PyInstaller\\hooks'...
+28474 INFO: Loading module hook 'hook-pytz.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\PyInstaller\\hooks'...
+28645 INFO: Loading module hook 'hook-pkg_resources.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\PyInstaller\\hooks'...
+29970 INFO: Loading module hook 'hook-jaraco.text.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\hooks\\stdhooks'...
+30068 INFO: Loading module hook 'hook-importlib_resources.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\PyInstaller\\hooks'...
+30224 INFO: Loading module hook 'hook-platformdirs.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\hooks\\stdhooks'...
+30259 INFO: Loading module hook 'hook-pyarrow.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\hooks\\stdhooks'...
+31682 INFO: Loading module hook 'hook-charset_normalizer.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\hooks\\stdhooks'...
+31773 INFO: Loading module hook 'hook-cryptography.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\hooks\\stdhooks'...
+33089 INFO: Loading module hook 'hook-bcrypt.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\hooks\\stdhooks'...
+33222 INFO: Loading module hook 'hook-certifi.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\hooks\\stdhooks'...
+34189 INFO: Loading module hook 'hook-scipy.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\PyInstaller\\hooks'...
+34213 INFO: Loading module hook 'hook-pytest.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\hooks\\stdhooks'...
+34320 INFO: Loading module hook 'hook-py.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\hooks\\stdhooks'...
+35209 INFO: Loading module hook 'hook-pycparser.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\hooks\\stdhooks'...
+35326 INFO: Loading module hook 'hook-setuptools.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\PyInstaller\\hooks'...
+486 WARNING: Failed to collect submodules for 'setuptools._vendor.typeguard' because importing 'setuptools._vendor.typeguard' raised: ModuleNotFoundError: No module named 'typeguard._config'
+36963 INFO: Processing pre-safe import module hook distutils from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\PyInstaller\\hooks\\pre_safe_import_module\\hook-distutils.py'.
+36964 INFO: Processing pre-find module path hook distutils from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\PyInstaller\\hooks\\pre_find_module_path\\hook-distutils.py'.
+37192 INFO: Loading module hook 'hook-distutils.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\PyInstaller\\hooks'...
+37206 INFO: Loading module hook 'hook-distutils.util.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\PyInstaller\\hooks'...
+37298 INFO: Loading module hook 'hook-setuptools.msvc.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\PyInstaller\\hooks'...
+37415 INFO: Loading module hook 'hook-importlib_metadata.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\PyInstaller\\hooks'...
+39661 INFO: Loading module hook 'hook-torch.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\hooks\\stdhooks'...
+4482 WARNING: Failed to collect submodules for 'torch.testing._internal.opinfo' because importing 'torch.testing._internal.opinfo' raised: ModuleNotFoundError: No module named 'expecttest'
+W0626 23:31:48.752000 3172 site-packages\torch\distributed\elastic\multiprocessing\redirects.py:29] NOTE: Redirects are currently not supported in Windows or MacOs.
+C:\Users\Elin\miniconda3\Lib\site-packages\PyInstaller\utils\hooks\__init__.py:653: DeprecationWarning: `torch.distributed._sharding_spec` will be deprecated, use `torch.distributed._shard.sharding_spec` instead
+  __import__(name)
+C:\Users\Elin\miniconda3\Lib\site-packages\PyInstaller\utils\hooks\__init__.py:653: DeprecationWarning: `torch.distributed._sharded_tensor` will be deprecated, use `torch.distributed._shard.sharded_tensor` instead
+  __import__(name)
+C:\Users\Elin\miniconda3\Lib\site-packages\PyInstaller\utils\hooks\__init__.py:653: DeprecationWarning: `torch.distributed._shard.checkpoint` will be deprecated, use `torch.distributed.checkpoint` instead
+  __import__(name)
+49034 INFO: hook-torch: raising recursion limit to 5000
+49147 INFO: Loading module hook 'hook-sympy.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\hooks\\stdhooks'...
+55558 INFO: Loading module hook 'hook-scipy.linalg.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\PyInstaller\\hooks'...
+56882 INFO: Loading module hook 'hook-scipy.sparse.csgraph.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\PyInstaller\\hooks'...
+57186 INFO: Loading module hook 'hook-scipy.spatial.transform.rotation.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\PyInstaller\\hooks'...
+58118 INFO: Loading module hook 'hook-lxml.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\hooks\\stdhooks'...
+59410 INFO: Loading module hook 'hook-wcwidth.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\PyInstaller\\hooks'...
+59978 INFO: Loading module hook 'hook-jedi.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\hooks\\stdhooks'...
+60628 INFO: Loading module hook 'hook-parso.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\hooks\\stdhooks'...
+61583 INFO: Loading module hook 'hook-sqlite3.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\PyInstaller\\hooks'...
+62105 INFO: Loading module hook 'hook-nbformat.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\hooks\\stdhooks'...
+62244 INFO: Loading module hook 'hook-jsonschema.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\hooks\\stdhooks'...
+62384 INFO: Loading module hook 'hook-jsonschema_specifications.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\hooks\\stdhooks'...
+63430 INFO: Loading module hook 'hook-triton.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\hooks\\stdhooks'...
+63570 WARNING: collect_data_files - skipping data collection for module 'triton.third_party.cuda' as it is not a package.
+67376 INFO: Processing pre-safe import module hook tensorflow from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\hooks\\pre_safe_import_module\\hook-tensorflow.py'.
+67672 INFO: Loading module hook 'hook-botocore.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\hooks\\stdhooks'...
+68595 INFO: Loading module hook 'hook-boto3.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\hooks\\stdhooks'...
+72642 INFO: Loading module hook 'hook-imageio.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\hooks\\stdhooks'...
+73472 INFO: Loading module hook 'hook-imageio_ffmpeg.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\hooks\\stdhooks'...
+73546 INFO: Loading module hook 'hook-moviepy.video.fx.all.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\hooks\\stdhooks'...
+74682 INFO: Loading module hook 'hook-moviepy.audio.fx.all.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\hooks\\stdhooks'...
+C:\Users\Elin\miniconda3\Lib\site-packages\moviepy\video\io\sliders.py:61: SyntaxWarning: "is" with a literal. Did you mean "=="?
+  if event.key is 'enter':
+75427 INFO: Loading module hook 'hook-pygame.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\pygame\\__pyinstaller'...
+pygame 2.6.1 (SDL 2.28.4, Python 3.11.4)
+Hello from the pygame community. https://www.pygame.org/contribute.html
+78714 INFO: Processing pre-safe import module hook win32com from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\hooks\\pre_safe_import_module\\hook-win32com.py'.
+78770 INFO: Loading module hook 'hook-win32com.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\hooks\\stdhooks'...
+78771 INFO: Loading module hook 'hook-pythoncom.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\hooks\\stdhooks'...
+78828 INFO: Loading module hook 'hook-pywintypes.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\hooks\\stdhooks'...
+79729 INFO: Loading module hook 'hook-transformers.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\hooks\\stdhooks'...
+80785 WARNING: hook-transformers: failed to query dependency table (transformers.dependency_versions_table.deps)!
+Traceback (most recent call last):
+  File "C:\Users\Elin\miniconda3\Lib\site-packages\PyInstaller\utils\hooks\__init__.py", line 282, in get_module_attribute
+    return _get_module_attribute(module_name, attr_name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Elin\miniconda3\Lib\site-packages\PyInstaller\isolated\_parent.py", line 420, in wrapped
+    return call(function, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Elin\miniconda3\Lib\site-packages\PyInstaller\isolated\_parent.py", line 389, in call
+    return isolated.call(function, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Elin\miniconda3\Lib\site-packages\PyInstaller\isolated\_parent.py", line 319, in call
+    raise RuntimeError(f"Child process call to {function.__name__}() failed with:\n" + output)
+RuntimeError: Child process call to _get_module_attribute() failed with:
+  File "C:\Users\Elin\miniconda3\Lib\site-packages\PyInstaller\isolated\_child.py", line 63, in run_next_command
+    output = function(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Elin\miniconda3\Lib\site-packages\PyInstaller\utils\hooks\__init__.py", line 277, in _get_module_attribute
+    module = importlib.import_module(module_name)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Elin\miniconda3\Lib\importlib\__init__.py", line 126, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1204, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1176, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1126, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 241, in _call_with_frames_removed
+  File "<frozen importlib._bootstrap>", line 1204, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1176, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1147, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 690, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 940, in exec_module
+  File "<frozen importlib._bootstrap>", line 241, in _call_with_frames_removed
+  File "C:\Users\Elin\miniconda3\Lib\site-packages\transformers\__init__.py", line 30, in <module>
+    from . import dependency_versions_check
+  File "C:\Users\Elin\miniconda3\Lib\site-packages\transformers\dependency_versions_check.py", line 56, in <module>
+    require_version_core(deps[pkg])
+  File "C:\Users\Elin\miniconda3\Lib\site-packages\transformers\utils\versions.py", line 116, in require_version_core
+    return require_version(requirement, hint)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Elin\miniconda3\Lib\site-packages\transformers\utils\versions.py", line 110, in require_version
+    _compare_versions(op, got_ver, want_ver, requirement, pkg, hint)
+  File "C:\Users\Elin\miniconda3\Lib\site-packages\transformers\utils\versions.py", line 43, in _compare_versions
+    raise ImportError(
+ImportError: huggingface-hub>=1.5.0,<2.0 is required for a normal functioning of this module, but found huggingface-hub==0.36.2.
+Try: `pip install transformers -U` or `pip install -e '.[dev]'` if you're working with git main
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\Elin\miniconda3\Lib\site-packages\_pyinstaller_hooks_contrib\hooks\stdhooks\hook-transformers.py", line 17, in <module>
+    dependencies = get_module_attribute(
+                   ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Elin\miniconda3\Lib\site-packages\PyInstaller\utils\hooks\__init__.py", line 284, in get_module_attribute
+    raise AttributeError(f"Failed to retrieve attribute {attr_name} from module {module_name}") from e
+AttributeError: Failed to retrieve attribute deps from module transformers.dependency_versions_table
+80825 INFO: Loading module hook 'hook-regex.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\hooks\\stdhooks'...
+84075 INFO: Loading module hook 'hook-orjson.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\hooks\\stdhooks'...
+85028 INFO: Loading module hook 'hook-zoneinfo.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\hooks\\stdhooks'...
+86075 INFO: Loading module hook 'hook-uvicorn.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\hooks\\stdhooks'...
+86850 INFO: Loading module hook 'hook-websockets.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\hooks\\stdhooks'...
+90859 INFO: Loading module hook 'hook-bitsandbytes.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\hooks\\stdhooks'...
+91594 INFO: Loading module hook 'hook-datasets.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\hooks\\stdhooks'...
+91927 INFO: Loading module hook 'hook-shelve.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\PyInstaller\\hooks'...
+92593 INFO: Loading module hook 'hook-scipy.io.matlab.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\PyInstaller\\hooks'...
+93123 INFO: Loading module hook 'hook-numba.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\hooks\\stdhooks'...
+93134 INFO: Loading module hook 'hook-llvmlite.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\hooks\\stdhooks'...
+97785 INFO: Loading module hook 'hook-pandas.io.formats.style.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\PyInstaller\\hooks'...
+99027 INFO: Loading module hook 'hook-openpyxl.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\hooks\\stdhooks'...
+100966 INFO: Loading module hook 'hook-pandas.plotting.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\PyInstaller\\hooks'...
+101289 INFO: Loading module hook 'hook-soundfile.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\hooks\\stdhooks'...
+101295 INFO: Loading module hook 'hook-librosa.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\hooks\\stdhooks'...
+102030 INFO: Loading module hook 'hook-sqlalchemy.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\PyInstaller\\hooks'...
+104499 INFO: Loading module hook 'hook-altair.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\hooks\\stdhooks'...
+106348 INFO: Processing pre-safe import module hook gi from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\PyInstaller\\hooks\\pre_safe_import_module\\hook-gi.py'.
+107837 INFO: Loading module hook 'hook-gevent.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\PyInstaller\\hooks'...
+109724 INFO: Loading module hook 'hook-zope.interface.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\PyInstaller\\hooks'...
+110508 INFO: Loading module hook 'hook-torchvision.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\hooks\\stdhooks'...
+110583 INFO: Loading module hook 'hook-torchvision.io.image.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\hooks\\stdhooks'...
+111156 INFO: Loading module hook 'hook-av.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\hooks\\stdhooks'...
+112433 INFO: Loading module hook 'hook-torchaudio.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\hooks\\stdhooks'...
+119329 INFO: Loading module hook 'hook-cv2.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\hooks\\stdhooks'...
+119989 INFO: Loading module hook 'hook-yt_dlp.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\yt_dlp\\__pyinstaller'...
+421 WARNING: Failed to collect submodules for 'urllib3.contrib.emscripten' because importing 'urllib3.contrib.emscripten' raised: ModuleNotFoundError: No module named 'js'
+Adding imports: ['yt_dlp.compat._legacy', 'yt_dlp.compat._deprecated', 'yt_dlp.utils._legacy', 'yt_dlp.utils._deprecated', 'Cryptodome', 'websockets', 'websockets.__main__', 'websockets.asyncio', 'websockets.asyncio.async_timeout', 'websockets.asyncio.client', 'websockets.asyncio.compatibility', 'websockets.asyncio.connection', 'websockets.asyncio.messages', 'websockets.asyncio.router', 'websockets.asyncio.server', 'websockets.auth', 'websockets.cli', 'websockets.client', 'websockets.connection', 'websockets.datastructures', 'websockets.exceptions', 'websockets.extensions', 'websockets.extensions.base', 'websockets.extensions.permessage_deflate', 'websockets.frames', 'websockets.headers', 'websockets.http', 'websockets.http11', 'websockets.imports', 'websockets.legacy', 'websockets.legacy.auth', 'websockets.legacy.client', 'websockets.legacy.exceptions', 'websockets.legacy.framing', 'websockets.legacy.handshake', 'websockets.legacy.http', 'websockets.legacy.protocol', 'websockets.legacy.server', 'websockets.protocol', 'websockets.proxy', 'websockets.server', 'websockets.speedups', 'websockets.streams', 'websockets.sync', 'websockets.sync.client', 'websockets.sync.connection', 'websockets.sync.messages', 'websockets.sync.router', 'websockets.sync.server', 'websockets.sync.utils', 'websockets.typing', 'websockets.uri', 'websockets.utils', 'websockets.version', 'requests', 'requests.__version__', 'requests._internal_utils', 'requests.adapters', 'requests.api', 'requests.auth', 'requests.certs', 'requests.compat', 'requests.cookies', 'requests.exceptions', 'requests.help', 'requests.hooks', 'requests.models', 'requests.packages', 'requests.sessions', 'requests.status_codes', 'requests.structures', 'requests.utils', 'urllib3', 'urllib3._base_connection', 'urllib3._collections', 'urllib3._request_methods', 'urllib3._version', 'urllib3.connection', 'urllib3.connectionpool', 'urllib3.contrib', 'urllib3.contrib.pyopenssl', 'urllib3.contrib.socks', 'urllib3.exceptions', 'urllib3.fields', 'urllib3.filepost', 'urllib3.http2', 'urllib3.http2.connection', 'urllib3.http2.probe', 'urllib3.poolmanager', 'urllib3.response', 'urllib3.util', 'urllib3.util.connection', 'urllib3.util.proxy', 'urllib3.util.request', 'urllib3.util.response', 'urllib3.util.retry', 'urllib3.util.ssl_', 'urllib3.util.ssl_match_hostname', 'urllib3.util.ssltransport', 'urllib3.util.timeout', 'urllib3.util.url', 'urllib3.util.util', 'urllib3.util.wait', 'mutagen', 'brotli', 'certifi', 'secretstorage']
+122827 INFO: Loading module hook 'hook-Cryptodome.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\hooks\\stdhooks'...
+123297 INFO: Loading module hook 'hook-Crypto.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\hooks\\stdhooks'...
+129906 INFO: Loading module hook 'hook-sklearn.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\hooks\\stdhooks'...
+130334 INFO: Loading module hook 'hook-sklearn.utils.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\hooks\\stdhooks'...
+130626 INFO: Loading module hook 'hook-sklearn.metrics.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\hooks\\stdhooks'...
+133402 INFO: Loading module hook 'hook-sklearn.metrics.cluster.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\hooks\\stdhooks'...
+133444 INFO: Loading module hook 'hook-sklearn.metrics.pairwise.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\hooks\\stdhooks'...
+133543 INFO: Loading module hook 'hook-sklearn.cluster.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\hooks\\stdhooks'...
+133649 INFO: Loading module hook 'hook-sklearn.neighbors.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\hooks\\stdhooks'...
+133713 INFO: Loading module hook 'hook-sklearn.linear_model.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\hooks\\stdhooks'...
+134865 INFO: Loading module hook 'hook-timm.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\hooks\\stdhooks'...
+145605 INFO: Loading module hook 'hook-nltk.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\hooks\\stdhooks'...
+157060 INFO: Loading module hook 'hook-plotly.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\hooks\\stdhooks'...
+161662 INFO: Loading module hook 'hook-skimage.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\hooks\\stdhooks'...
+161765 INFO: Loading module hook 'hook-skimage.exposure.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\hooks\\stdhooks'...
+162874 INFO: Loading module hook 'hook-skimage.data.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\hooks\\stdhooks'...
+163983 INFO: Loading module hook 'hook-skimage.measure.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\hooks\\stdhooks'...
+164020 INFO: Loading module hook 'hook-skimage.morphology.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\hooks\\stdhooks'...
+164357 INFO: Loading module hook 'hook-skimage.draw.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\hooks\\stdhooks'...
+165464 INFO: Loading module hook 'hook-skimage.filters.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\hooks\\stdhooks'...
+168177 INFO: Loading module hook 'hook-skimage.color.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\hooks\\stdhooks'...
+169872 INFO: Loading module hook 'hook-google.cloud.storage.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\hooks\\stdhooks'...
+169901 INFO: Loading module hook 'hook-grpc.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\hooks\\stdhooks'...
+170168 INFO: Loading module hook 'hook-google.api_core.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\hooks\\stdhooks'...
+178076 INFO: Loading module hook 'hook-mako.codegen.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\hooks\\stdhooks'...
+179137 INFO: Loading module hook 'hook-psycopg2.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\hooks\\stdhooks'...
+179584 INFO: Loading module hook 'hook-shapely.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\hooks\\stdhooks'...
+182264 INFO: Loading module hook 'hook-dns.rdata.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\hooks\\stdhooks'...
+206474 INFO: Loading module hook 'hook-docx.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\hooks\\stdhooks'...
+206950 INFO: Analyzing hidden import 'app.core.model_cache'
+206952 INFO: Analyzing hidden import 'app.main'
+207114 INFO: Loading module hook 'hook-appdirs.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\hooks\\stdhooks'...
+C:\Users\Elin\miniconda3\Lib\site-packages\voicefixer\vocoder\model\modules.py:754: SyntaxWarning: "is not" with a literal. Did you mean "!="?
+  if self.causal and self.padding is not 0:
+207596 INFO: Analyzing hidden import 'app.services.export_service'
+207598 INFO: Analyzing hidden import 'app.services.voice_service'
+207601 INFO: Analyzing hidden import 'app.workers.export_worker'
+207602 INFO: Analyzing hidden import 'app.workers.install_worker'
+207603 INFO: Analyzing hidden import 'uvicorn.loops.auto'
+207618 INFO: Analyzing hidden import 'uvicorn.protocols.http.auto'
+207623 INFO: Analyzing hidden import 'uvicorn.protocols.websockets.auto'
+207628 INFO: Analyzing hidden import 'uvicorn.lifespan.on'
+207637 INFO: Analyzing hidden import 'uvicorn.lifespan.off'
+207641 INFO: Analyzing hidden import 'anyio._backends._asyncio'
+207707 INFO: Analyzing hidden import 'ebooklib.plugins'
+207707 INFO: Analyzing hidden import 'ebooklib.plugins.base'
+207709 INFO: Analyzing hidden import 'ebooklib.plugins.booktype'
+207711 INFO: Analyzing hidden import 'ebooklib.plugins.sourcecode'
+207713 INFO: Analyzing hidden import 'ebooklib.plugins.standard'
+207718 INFO: Analyzing hidden import 'ebooklib.plugins.tidyhtml'
+207719 INFO: Analyzing hidden import 'fitz.table'
+207720 INFO: Analyzing hidden import 'fitz.utils'
+207721 INFO: Analyzing hidden import 'bs4.diagnose'
+207726 INFO: Analyzing hidden import 'bs4.tests'
+207742 INFO: Analyzing hidden import 'bs4.tests.test_builder'
+207744 INFO: Analyzing hidden import 'bs4.tests.test_builder_registry'
+207747 INFO: Analyzing hidden import 'bs4.tests.test_css'
+207756 INFO: Analyzing hidden import 'bs4.tests.test_dammit'
+207762 INFO: Analyzing hidden import 'bs4.tests.test_element'
+207765 INFO: Analyzing hidden import 'bs4.tests.test_filter'
+207776 INFO: Analyzing hidden import 'bs4.tests.test_formatter'
+207779 INFO: Analyzing hidden import 'bs4.tests.test_fuzz'
+207782 INFO: Analyzing hidden import 'bs4.tests.test_html5lib'
+207786 INFO: Analyzing hidden import 'bs4.tests.test_htmlparser'
+207789 INFO: Analyzing hidden import 'bs4.tests.test_lxml'
+207791 INFO: Analyzing hidden import 'bs4.tests.test_navigablestring'
+207794 INFO: Analyzing hidden import 'bs4.tests.test_pageelement'
+207801 INFO: Analyzing hidden import 'bs4.tests.test_soup'
+207811 INFO: Analyzing hidden import 'bs4.tests.test_tag'
+207815 INFO: Analyzing hidden import 'bs4.tests.test_tree'
+207842 INFO: Analyzing hidden import 'PIL.AvifImagePlugin'
+207848 INFO: Analyzing hidden import 'PIL.BdfFontFile'
+207853 INFO: Analyzing hidden import 'PIL.BlpImagePlugin'
+207863 INFO: Analyzing hidden import 'PIL.BufrStubImagePlugin'
+207865 INFO: Analyzing hidden import 'PIL.ContainerIO'
+207867 INFO: Analyzing hidden import 'PIL.CurImagePlugin'
+207869 INFO: Analyzing hidden import 'PIL.DcxImagePlugin'
+207874 INFO: Analyzing hidden import 'PIL.DdsImagePlugin'
+207884 INFO: Analyzing hidden import 'PIL.EpsImagePlugin'
+207891 INFO: Analyzing hidden import 'PIL.FitsImagePlugin'
+207895 INFO: Analyzing hidden import 'PIL.FliImagePlugin'
+207898 INFO: Analyzing hidden import 'PIL.FpxImagePlugin'
+207934 INFO: Analyzing hidden import 'PIL.FtexImagePlugin'
+207936 INFO: Analyzing hidden import 'PIL.GbrImagePlugin'
+207939 INFO: Analyzing hidden import 'PIL.GdImageFile'
+207940 INFO: Analyzing hidden import 'PIL.GribStubImagePlugin'
+207942 INFO: Analyzing hidden import 'PIL.Hdf5StubImagePlugin'
+207943 INFO: Analyzing hidden import 'PIL.IcnsImagePlugin'
+207959 INFO: Analyzing hidden import 'PIL.IcoImagePlugin'
+207966 INFO: Analyzing hidden import 'PIL.ImImagePlugin'
+207973 INFO: Analyzing hidden import 'PIL.ImageGrab'
+207977 INFO: Analyzing hidden import 'PIL.ImageMorph'
+207981 INFO: Analyzing hidden import 'PIL.ImageTransform'
+207983 INFO: Analyzing hidden import 'PIL.ImtImagePlugin'
+207985 INFO: Analyzing hidden import 'PIL.IptcImagePlugin'
+207989 INFO: Analyzing hidden import 'PIL.McIdasImagePlugin'
+207991 INFO: Analyzing hidden import 'PIL.MicImagePlugin'
+207993 INFO: Analyzing hidden import 'PIL.MpegImagePlugin'
+207995 INFO: Analyzing hidden import 'PIL.MspImagePlugin'
+207998 INFO: Analyzing hidden import 'PIL.PSDraw'
+208000 INFO: Analyzing hidden import 'PIL.PalmImagePlugin'
+208005 INFO: Analyzing hidden import 'PIL.PcdImagePlugin'
+208007 INFO: Analyzing hidden import 'PIL.PcfFontFile'
+208012 INFO: Analyzing hidden import 'PIL.PdfImagePlugin'
+208036 INFO: Analyzing hidden import 'PIL.PixarImagePlugin'
+208038 INFO: Analyzing hidden import 'PIL.PsdImagePlugin'
+208044 INFO: Analyzing hidden import 'PIL.QoiImagePlugin'
+208049 INFO: Analyzing hidden import 'PIL.SgiImagePlugin'
+208053 INFO: Analyzing hidden import 'PIL.SpiderImagePlugin'
+208058 INFO: Loading module hook 'hook-PIL.SpiderImagePlugin.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\PyInstaller\\hooks'...
+208059 INFO: Analyzing hidden import 'PIL.SunImagePlugin'
+208061 INFO: Analyzing hidden import 'PIL.TarIO'
+208064 INFO: Analyzing hidden import 'PIL.TgaImagePlugin'
+208068 INFO: Analyzing hidden import 'PIL.WalImageFile'
+208070 INFO: Analyzing hidden import 'PIL.WebPImagePlugin'
+208076 INFO: Analyzing hidden import 'PIL.WmfImagePlugin'
+208079 INFO: Analyzing hidden import 'PIL.XVThumbImagePlugin'
+208081 INFO: Analyzing hidden import 'PIL.XbmImagePlugin'
+208083 INFO: Analyzing hidden import 'PIL.XpmImagePlugin'
+208086 INFO: Analyzing hidden import 'PIL.__main__'
+208086 INFO: Analyzing hidden import 'PIL._tkinter_finder'
+208087 INFO: Analyzing hidden import 'PIL.report'
+208088 INFO: Analyzing hidden import 'mutagen._tools'
+208088 INFO: Analyzing hidden import 'mutagen._tools._util'
+208090 INFO: Analyzing hidden import 'mutagen._tools.mid3cp'
+208093 INFO: Analyzing hidden import 'mutagen._tools.mid3iconv'
+208096 INFO: Analyzing hidden import 'mutagen._tools.mid3v2'
+208105 INFO: Analyzing hidden import 'mutagen._tools.moggsplit'
+208107 INFO: Analyzing hidden import 'mutagen._tools.mutagen_inspect'
+208108 INFO: Analyzing hidden import 'mutagen._tools.mutagen_pony'
+208111 INFO: Analyzing hidden import 'mutagen.m4a'
+208113 INFO: Analyzing hidden import 'pydantic.alias_generators'
+208120 INFO: Analyzing hidden import 'pydantic.class_validators'
+208124 INFO: Analyzing hidden import 'pydantic.decorator'
+208128 INFO: Analyzing hidden import 'pydantic.deprecated.decorator'
+208140 INFO: Analyzing hidden import 'pydantic.env_settings'
+208147 INFO: Analyzing hidden import 'pydantic.error_wrappers'
+208152 INFO: Analyzing hidden import 'pydantic.experimental'
+208158 INFO: Analyzing hidden import 'pydantic.experimental.arguments_schema'
+208166 INFO: Analyzing hidden import 'pydantic.experimental.missing_sentinel'
+208173 INFO: Analyzing hidden import 'pydantic.experimental.pipeline'
+208194 INFO: Analyzing hidden import 'pydantic.mypy'
+208221 INFO: Analyzing hidden import 'pydantic.parse'
+208226 INFO: Analyzing hidden import 'pydantic.schema'
+208231 INFO: Analyzing hidden import 'pydantic.tools'
+208235 INFO: Analyzing hidden import 'pydantic.utils'
+208240 INFO: Analyzing hidden import 'pydantic.v1._hypothesis_plugin'
+208254 INFO: Analyzing hidden import 'pydantic.v1.generics'
+208267 INFO: Analyzing hidden import 'pydantic.v1.mypy'
+208289 INFO: Analyzing hidden import 'pydantic.validators'
+208293 INFO: Processing module hooks...
+210296 INFO: Loading module hook 'hook-lxml.etree.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\hooks\\stdhooks'...
+210338 INFO: Loading module hook 'hook-lxml.isoschematron.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\hooks\\stdhooks'...
+210378 WARNING: Hidden import "mx.DateTime" not found!
+210423 WARNING: Hidden import "pycparser.lextab" not found!
+210423 WARNING: Hidden import "pycparser.yacctab" not found!
+210503 INFO: Loading module hook 'hook-skimage.io.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\hooks\\stdhooks'...
+212179 INFO: Loading module hook 'hook-skimage.transform.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\hooks\\stdhooks'...
+212185 INFO: Loading module hook 'hook-skimage.feature.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\hooks\\stdhooks'...
+212399 INFO: Loading module hook 'hook-skimage.restoration.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\hooks\\stdhooks'...
+212418 INFO: Loading module hook 'hook-pywt.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\hooks\\stdhooks'...
+212611 INFO: Loading module hook 'hook-sklearn.tree.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\hooks\\stdhooks'...
+213389 INFO: Loading module hook 'hook-lightning.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\hooks\\stdhooks'...
+223639 WARNING: Hidden import "importlib_resources.trees" not found!
+223639 INFO: Loading module hook 'hook-matplotlib.backends.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\PyInstaller\\hooks'...
+223640 INFO: Matplotlib backend selection method: automatic discovery of used backends
+223675 INFO: Discovered Matplotlib backend(s) via `matplotlib.use()` call in module 'sympy.testing.runtests': ['Agg', 'Agg']
+223728 INFO: Discovered Matplotlib backend(s) via `matplotlib.use()` call in module 'gradio.utils': ['agg']
+223781 INFO: Discovered Matplotlib backend(s) via `matplotlib.use()` call in module 'imageio.plugins._tifffile': ['TkAgg']
+223866 INFO: The following Matplotlib backends were discovered by scanning for `matplotlib.use()` calls: ['Agg', 'TkAgg', 'agg']. If your backend of choice is not in this list, either add a `matplotlib.use()` call to your code, or configure the backend collection via hook options (see: https://pyinstaller.org/en/stable/hooks-config.html#matplotlib-hooks).
+223866 INFO: Selected matplotlib backends: ['Agg', 'TkAgg', 'agg']
+223995 WARNING: Hidden import "pkg_resources._vendor.jaraco.functools" not found!
+223995 WARNING: Hidden import "pkg_resources._vendor.jaraco.context" not found!
+223996 WARNING: Hidden import "pkg_resources._vendor.jaraco.text" not found!
+226549 INFO: Loading module hook 'hook-scipy.special._ellip_harm_2.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\PyInstaller\\hooks'...
+226551 INFO: Loading module hook 'hook-scipy.special._ufuncs.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\PyInstaller\\hooks'...
+226551 INFO: Loading module hook 'hook-scipy.stats._stats.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\PyInstaller\\hooks'...
+227701 INFO: Loading module hook 'hook-setuptools._distutils.command.check.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\PyInstaller\\hooks'...
+228017 INFO: Loading module hook 'hook-distutils.command.check.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\PyInstaller\\hooks'...
+228642 INFO: Loading module hook 'hook-sqlalchemy.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\PyInstaller\\hooks'...
+228863 WARNING: Hidden import "pysqlite2" not found!
+228864 WARNING: Hidden import "MySQLdb" not found!
+228916 INFO: Loading module hook 'hook-lxml.objectify.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\hooks\\stdhooks'...
+228917 INFO: Loading module hook 'hook-tzdata.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\hooks\\stdhooks'...
+229718 INFO: Performing binary vs. data reclassification (7040 entries)
+232023 INFO: Looking for ctypes DLLs
+232277 WARNING: Ignoring /usr/lib64/libgomp.so.1 imported from C:\Users\Elin\miniconda3\Lib\site-packages\torch\_inductor\codecache.py - only basenames are supported with ctypes imports!
+233328 INFO: Analyzing run-time hooks ...
+233393 INFO: Including run-time hook 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\PyInstaller\\hooks\\rthooks\\pyi_rth_inspect.py'
+233396 INFO: Including run-time hook 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\PyInstaller\\hooks\\rthooks\\pyi_rth_pkgutil.py'
+233398 INFO: Processing pre-find module path hook _pyi_rth_utils from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\PyInstaller\\hooks\\pre_find_module_path\\hook-_pyi_rth_utils.py'.
+233400 INFO: Loading module hook 'hook-_pyi_rth_utils.py' from 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\PyInstaller\\hooks'...
+233401 INFO: Including run-time hook 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\PyInstaller\\hooks\\rthooks\\pyi_rth_multiprocessing.py'
+233403 INFO: Including run-time hook 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\hooks\\rthooks\\pyi_rth_traitlets.py'
+233405 INFO: Including run-time hook 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\PyInstaller\\hooks\\rthooks\\pyi_rth_pkgres.py'
+233407 INFO: Including run-time hook 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\PyInstaller\\hooks\\rthooks\\pyi_rth_setuptools.py'
+233409 INFO: Including run-time hook 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\PyInstaller\\hooks\\rthooks\\pyi_rth_win32comgenpy.py'
+233415 INFO: Including run-time hook 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\hooks\\rthooks\\pyi_rth_pywintypes.py'
+233416 INFO: Including run-time hook 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\hooks\\rthooks\\pyi_rth_pythoncom.py'
+233420 INFO: Including run-time hook 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\hooks\\rthooks\\pyi_rth_nltk.py'
+233422 INFO: Including run-time hook 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\PyInstaller\\hooks\\rthooks\\pyi_rth_mplconfig.py'
+233752 INFO: Looking for dynamic libraries
+C:\Users\Elin\miniconda3\Lib\site-packages\PyInstaller\building\build_main.py:194: UserWarning: The numpy.array_api submodule is still experimental. See NEP 47.
+  __import__(package)
+C:\Users\Elin\miniconda3\Lib\site-packages\cuda\pathfinder\_dynamic_libs\search_steps.py:196: UserWarning: Multiple CUDA environment variables are set but differ:
+  CUDA_PATH=C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.6
+  CUDA_HOME=C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.4
+Using CUDA_PATH (highest priority).
+  cuda_home = get_cuda_path_or_home()
+pygame 2.6.1 (SDL 2.28.4, Python 3.11.4)
+Hello from the pygame community. https://www.pygame.org/contribute.html
+C:\Users\Elin\AppData\Roaming\Python\Python311\site-packages\_distutils_hack\__init__.py:31: UserWarning: Setuptools is replacing distutils. Support for replacing an already imported distutils is deprecated. In the future, this condition will fail. Register concerns at https://github.com/pypa/setuptools/issues/new?template=distutils-deprecation.yml
+  warnings.warn(
+Windows fatal exception: code 0xc0000139
+
+Current thread 0x00008b94 (most recent call first):
+  File "C:\Users\Elin\miniconda3\Lib\ctypes\__init__.py", line 376 in __init__
+  File "C:\Users\Elin\miniconda3\Lib\site-packages\torch\_ops.py", line 1392 in load_library
+  File "C:\Users\Elin\miniconda3\Lib\site-packages\torchcodec\_core\ops.py", line 57 in load_torchcodec_shared_libraries
+  File "C:\Users\Elin\miniconda3\Lib\site-packages\torchcodec\_core\ops.py", line 109 in <module>
+  File "<frozen importlib._bootstrap>", line 241 in _call_with_frames_removed
+  File "<frozen importlib._bootstrap_external>", line 940 in exec_module
+  File "<frozen importlib._bootstrap>", line 690 in _load_unlocked
+  File "<frozen importlib._bootstrap>", line 1147 in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 1176 in _find_and_load
+  File "C:\Users\Elin\miniconda3\Lib\site-packages\torchcodec\_core\_metadata.py", line 16 in <module>
+  File "<frozen importlib._bootstrap>", line 241 in _call_with_frames_removed
+  File "<frozen importlib._bootstrap_external>", line 940 in exec_module
+  File "<frozen importlib._bootstrap>", line 690 in _load_unlocked
+  File "<frozen importlib._bootstrap>", line 1147 in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 1176 in _find_and_load
+  File "C:\Users\Elin\miniconda3\Lib\site-packages\torchcodec\_core\__init__.py", line 8 in <module>
+  File "<frozen importlib._bootstrap>", line 241 in _call_with_frames_removed
+  File "<frozen importlib._bootstrap_external>", line 940 in exec_module
+  File "<frozen importlib._bootstrap>", line 690 in _load_unlocked
+  File "<frozen importlib._bootstrap>", line 1147 in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 1176 in _find_and_load
+  File "C:\Users\Elin\miniconda3\Lib\site-packages\torchcodec\decoders\__init__.py", line 7 in <module>
+  File "<frozen importlib._bootstrap>", line 241 in _call_with_frames_removed
+  File "<frozen importlib._bootstrap_external>", line 940 in exec_module
+  File "<frozen importlib._bootstrap>", line 690 in _load_unlocked
+  File "<frozen importlib._bootstrap>", line 1147 in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 1176 in _find_and_load
+  File "<frozen importlib._bootstrap>", line 241 in _call_with_frames_removed
+  File "<frozen importlib._bootstrap>", line 1232 in _handle_fromlist
+  File "C:\Users\Elin\miniconda3\Lib\site-packages\torchcodec\__init__.py", line 12 in <module>
+  File "<frozen importlib._bootstrap>", line 241 in _call_with_frames_removed
+  File "<frozen importlib._bootstrap_external>", line 940 in exec_module
+  File "<frozen importlib._bootstrap>", line 690 in _load_unlocked
+  File "<frozen importlib._bootstrap>", line 1147 in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 1176 in _find_and_load
+  File "<frozen importlib._bootstrap>", line 241 in _call_with_frames_removed
+  File "<frozen importlib._bootstrap>", line 1126 in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 1176 in _find_and_load
+  File "C:\Users\Elin\miniconda3\Lib\site-packages\PyInstaller\building\build_main.py", line 194 in import_library
+  File "C:\Users\Elin\miniconda3\Lib\site-packages\PyInstaller\isolated\_child.py", line 63 in run_next_command
+  File "C:\Users\Elin\miniconda3\Lib\site-packages\PyInstaller\isolated\_child.py", line 96 in <module>
+Windows fatal exception: code 0xc0000139
+
+Current thread 0x00008b94 (most recent call first):
+  File "C:\Users\Elin\miniconda3\Lib\ctypes\__init__.py", line 376 in __init__
+  File "C:\Users\Elin\miniconda3\Lib\site-packages\torch\_ops.py", line 1392 in load_library
+  File "C:\Users\Elin\miniconda3\Lib\site-packages\torchcodec\_core\ops.py", line 57 in load_torchcodec_shared_libraries
+  File "C:\Users\Elin\miniconda3\Lib\site-packages\torchcodec\_core\ops.py", line 109 in <module>
+  File "<frozen importlib._bootstrap>", line 241 in _call_with_frames_removed
+  File "<frozen importlib._bootstrap_external>", line 940 in exec_module
+  File "<frozen importlib._bootstrap>", line 690 in _load_unlocked
+  File "<frozen importlib._bootstrap>", line 1147 in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 1176 in _find_and_load
+  File "C:\Users\Elin\miniconda3\Lib\site-packages\torchcodec\_core\_metadata.py", line 16 in <module>
+  File "<frozen importlib._bootstrap>", line 241 in _call_with_frames_removed
+  File "<frozen importlib._bootstrap_external>", line 940 in exec_module
+  File "<frozen importlib._bootstrap>", line 690 in _load_unlocked
+  File "<frozen importlib._bootstrap>", line 1147 in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 1176 in _find_and_load
+  File "C:\Users\Elin\miniconda3\Lib\site-packages\torchcodec\_core\__init__.py", line 8 in <module>
+  File "<frozen importlib._bootstrap>", line 241 in _call_with_frames_removed
+  File "<frozen importlib._bootstrap_external>", line 940 in exec_module
+  File "<frozen importlib._bootstrap>", line 690 in _load_unlocked
+  File "<frozen importlib._bootstrap>", line 1147 in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 1176 in _find_and_load
+  File "C:\Users\Elin\miniconda3\Lib\site-packages\torchcodec\decoders\__init__.py", line 7 in <module>
+  File "<frozen importlib._bootstrap>", line 241 in _call_with_frames_removed
+  File "<frozen importlib._bootstrap_external>", line 940 in exec_module
+  File "<frozen importlib._bootstrap>", line 690 in _load_unlocked
+  File "<frozen importlib._bootstrap>", line 1147 in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 1176 in _find_and_load
+  File "<frozen importlib._bootstrap>", line 241 in _call_with_frames_removed
+  File "<frozen importlib._bootstrap>", line 1232 in _handle_fromlist
+  File "C:\Users\Elin\miniconda3\Lib\site-packages\torchcodec\__init__.py", line 12 in <module>
+  File "<frozen importlib._bootstrap>", line 241 in _call_with_frames_removed
+  File "<frozen importlib._bootstrap_external>", line 940 in exec_module
+  File "<frozen importlib._bootstrap>", line 690 in _load_unlocked
+  File "<frozen importlib._bootstrap>", line 1147 in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 1176 in _find_and_load
+  File "<frozen importlib._bootstrap>", line 241 in _call_with_frames_removed
+  File "<frozen importlib._bootstrap>", line 1126 in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 1176 in _find_and_load
+  File "C:\Users\Elin\miniconda3\Lib\site-packages\PyInstaller\building\build_main.py", line 194 in import_library
+  File "C:\Users\Elin\miniconda3\Lib\site-packages\PyInstaller\isolated\_child.py", line 63 in run_next_command
+  File "C:\Users\Elin\miniconda3\Lib\site-packages\PyInstaller\isolated\_child.py", line 96 in <module>
+Windows fatal exception: code 0xc0000139
+
+Current thread 0x00008b94 (most recent call first):
+  File "C:\Users\Elin\miniconda3\Lib\ctypes\__init__.py", line 376 in __init__
+  File "C:\Users\Elin\miniconda3\Lib\site-packages\torch\_ops.py", line 1392 in load_library
+  File "C:\Users\Elin\miniconda3\Lib\site-packages\torchcodec\_core\ops.py", line 57 in load_torchcodec_shared_libraries
+  File "C:\Users\Elin\miniconda3\Lib\site-packages\torchcodec\_core\ops.py", line 109 in <module>
+  File "<frozen importlib._bootstrap>", line 241 in _call_with_frames_removed
+  File "<frozen importlib._bootstrap_external>", line 940 in exec_module
+  File "<frozen importlib._bootstrap>", line 690 in _load_unlocked
+  File "<frozen importlib._bootstrap>", line 1147 in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 1176 in _find_and_load
+  File "C:\Users\Elin\miniconda3\Lib\site-packages\torchcodec\_core\_metadata.py", line 16 in <module>
+  File "<frozen importlib._bootstrap>", line 241 in _call_with_frames_removed
+  File "<frozen importlib._bootstrap_external>", line 940 in exec_module
+  File "<frozen importlib._bootstrap>", line 690 in _load_unlocked
+  File "<frozen importlib._bootstrap>", line 1147 in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 1176 in _find_and_load
+  File "C:\Users\Elin\miniconda3\Lib\site-packages\torchcodec\_core\__init__.py", line 8 in <module>
+  File "<frozen importlib._bootstrap>", line 241 in _call_with_frames_removed
+  File "<frozen importlib._bootstrap_external>", line 940 in exec_module
+  File "<frozen importlib._bootstrap>", line 690 in _load_unlocked
+  File "<frozen importlib._bootstrap>", line 1147 in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 1176 in _find_and_load
+  File "C:\Users\Elin\miniconda3\Lib\site-packages\torchcodec\decoders\__init__.py", line 7 in <module>
+  File "<frozen importlib._bootstrap>", line 241 in _call_with_frames_removed
+  File "<frozen importlib._bootstrap_external>", line 940 in exec_module
+  File "<frozen importlib._bootstrap>", line 690 in _load_unlocked
+  File "<frozen importlib._bootstrap>", line 1147 in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 1176 in _find_and_load
+  File "<frozen importlib._bootstrap>", line 241 in _call_with_frames_removed
+  File "<frozen importlib._bootstrap>", line 1232 in _handle_fromlist
+  File "C:\Users\Elin\miniconda3\Lib\site-packages\torchcodec\__init__.py", line 12 in <module>
+  File "<frozen importlib._bootstrap>", line 241 in _call_with_frames_removed
+  File "<frozen importlib._bootstrap_external>", line 940 in exec_module
+  File "<frozen importlib._bootstrap>", line 690 in _load_unlocked
+  File "<frozen importlib._bootstrap>", line 1147 in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 1176 in _find_and_load
+  File "C:\Users\Elin\miniconda3\Lib\site-packages\PyInstaller\building\build_main.py", line 194 in import_library
+  File "C:\Users\Elin\miniconda3\Lib\site-packages\PyInstaller\isolated\_child.py", line 63 in run_next_command
+  File "C:\Users\Elin\miniconda3\Lib\site-packages\PyInstaller\isolated\_child.py", line 96 in <module>
+Windows fatal exception: code 0xc0000139
+
+Current thread 0x00008b94 (most recent call first):
+  File "C:\Users\Elin\miniconda3\Lib\ctypes\__init__.py", line 376 in __init__
+  File "C:\Users\Elin\miniconda3\Lib\site-packages\torch\_ops.py", line 1392 in load_library
+  File "C:\Users\Elin\miniconda3\Lib\site-packages\torchcodec\_core\ops.py", line 57 in load_torchcodec_shared_libraries
+  File "C:\Users\Elin\miniconda3\Lib\site-packages\torchcodec\_core\ops.py", line 109 in <module>
+  File "<frozen importlib._bootstrap>", line 241 in _call_with_frames_removed
+  File "<frozen importlib._bootstrap_external>", line 940 in exec_module
+  File "<frozen importlib._bootstrap>", line 690 in _load_unlocked
+  File "<frozen importlib._bootstrap>", line 1147 in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 1176 in _find_and_load
+  File "C:\Users\Elin\miniconda3\Lib\site-packages\torchcodec\_core\_metadata.py", line 16 in <module>
+  File "<frozen importlib._bootstrap>", line 241 in _call_with_frames_removed
+  File "<frozen importlib._bootstrap_external>", line 940 in exec_module
+  File "<frozen importlib._bootstrap>", line 690 in _load_unlocked
+  File "<frozen importlib._bootstrap>", line 1147 in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 1176 in _find_and_load
+  File "C:\Users\Elin\miniconda3\Lib\site-packages\torchcodec\_core\__init__.py", line 8 in <module>
+  File "<frozen importlib._bootstrap>", line 241 in _call_with_frames_removed
+  File "<frozen importlib._bootstrap_external>", line 940 in exec_module
+  File "<frozen importlib._bootstrap>", line 690 in _load_unlocked
+  File "<frozen importlib._bootstrap>", line 1147 in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 1176 in _find_and_load
+  File "C:\Users\Elin\miniconda3\Lib\site-packages\torchcodec\decoders\__init__.py", line 7 in <module>
+  File "<frozen importlib._bootstrap>", line 241 in _call_with_frames_removed
+  File "<frozen importlib._bootstrap_external>", line 940 in exec_module
+  File "<frozen importlib._bootstrap>", line 690 in _load_unlocked
+  File "<frozen importlib._bootstrap>", line 1147 in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 1176 in _find_and_load
+  File "<frozen importlib._bootstrap>", line 241 in _call_with_frames_removed
+  File "<frozen importlib._bootstrap>", line 1232 in _handle_fromlist
+  File "C:\Users\Elin\miniconda3\Lib\site-packages\torchcodec\__init__.py", line 12 in <module>
+  File "<frozen importlib._bootstrap>", line 241 in _call_with_frames_removed
+  File "<frozen importlib._bootstrap_external>", line 940 in exec_module
+  File "<frozen importlib._bootstrap>", line 690 in _load_unlocked
+  File "<frozen importlib._bootstrap>", line 1147 in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 1176 in _find_and_load
+  File "<frozen importlib._bootstrap>", line 241 in _call_with_frames_removed
+  File "<frozen importlib._bootstrap>", line 1126 in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 1176 in _find_and_load
+  File "C:\Users\Elin\miniconda3\Lib\site-packages\PyInstaller\building\build_main.py", line 194 in import_library
+  File "C:\Users\Elin\miniconda3\Lib\site-packages\PyInstaller\isolated\_child.py", line 63 in run_next_command
+  File "C:\Users\Elin\miniconda3\Lib\site-packages\PyInstaller\isolated\_child.py", line 96 in <module>
+Windows fatal exception: code 0xc0000139
+
+Current thread 0x00008b94 (most recent call first):
+  File "C:\Users\Elin\miniconda3\Lib\ctypes\__init__.py", line 376 in __init__
+  File "C:\Users\Elin\miniconda3\Lib\site-packages\torch\_ops.py", line 1392 in load_library
+  File "C:\Users\Elin\miniconda3\Lib\site-packages\torchcodec\_core\ops.py", line 57 in load_torchcodec_shared_libraries
+  File "C:\Users\Elin\miniconda3\Lib\site-packages\torchcodec\_core\ops.py", line 109 in <module>
+  File "<frozen importlib._bootstrap>", line 241 in _call_with_frames_removed
+  File "<frozen importlib._bootstrap_external>", line 940 in exec_module
+  File "<frozen importlib._bootstrap>", line 690 in _load_unlocked
+  File "<frozen importlib._bootstrap>", line 1147 in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 1176 in _find_and_load
+  File "C:\Users\Elin\miniconda3\Lib\site-packages\torchcodec\_core\_metadata.py", line 16 in <module>
+  File "<frozen importlib._bootstrap>", line 241 in _call_with_frames_removed
+  File "<frozen importlib._bootstrap_external>", line 940 in exec_module
+  File "<frozen importlib._bootstrap>", line 690 in _load_unlocked
+  File "<frozen importlib._bootstrap>", line 1147 in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 1176 in _find_and_load
+  File "C:\Users\Elin\miniconda3\Lib\site-packages\torchcodec\_core\__init__.py", line 8 in <module>
+  File "<frozen importlib._bootstrap>", line 241 in _call_with_frames_removed
+  File "<frozen importlib._bootstrap_external>", line 940 in exec_module
+  File "<frozen importlib._bootstrap>", line 690 in _load_unlocked
+  File "<frozen importlib._bootstrap>", line 1147 in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 1176 in _find_and_load
+  File "C:\Users\Elin\miniconda3\Lib\site-packages\torchcodec\decoders\__init__.py", line 7 in <module>
+  File "<frozen importlib._bootstrap>", line 241 in _call_with_frames_removed
+  File "<frozen importlib._bootstrap_external>", line 940 in exec_module
+  File "<frozen importlib._bootstrap>", line 690 in _load_unlocked
+  File "<frozen importlib._bootstrap>", line 1147 in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 1176 in _find_and_load
+  File "<frozen importlib._bootstrap>", line 241 in _call_with_frames_removed
+  File "<frozen importlib._bootstrap>", line 1232 in _handle_fromlist
+  File "C:\Users\Elin\miniconda3\Lib\site-packages\torchcodec\__init__.py", line 12 in <module>
+  File "<frozen importlib._bootstrap>", line 241 in _call_with_frames_removed
+  File "<frozen importlib._bootstrap_external>", line 940 in exec_module
+  File "<frozen importlib._bootstrap>", line 690 in _load_unlocked
+  File "<frozen importlib._bootstrap>", line 1147 in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 1176 in _find_and_load
+  File "<frozen importlib._bootstrap>", line 241 in _call_with_frames_removed
+  File "<frozen importlib._bootstrap>", line 1126 in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 1176 in _find_and_load
+  File "C:\Users\Elin\miniconda3\Lib\site-packages\PyInstaller\building\build_main.py", line 194 in import_library
+  File "C:\Users\Elin\miniconda3\Lib\site-packages\PyInstaller\isolated\_child.py", line 63 in run_next_command
+  File "C:\Users\Elin\miniconda3\Lib\site-packages\PyInstaller\isolated\_child.py", line 96 in <module>
+Windows fatal exception: code 0xc0000139
+
+Current thread 0x00008b94 (most recent call first):
+  File "C:\Users\Elin\miniconda3\Lib\ctypes\__init__.py", line 376 in __init__
+  File "C:\Users\Elin\miniconda3\Lib\site-packages\torch\_ops.py", line 1392 in load_library
+  File "C:\Users\Elin\miniconda3\Lib\site-packages\torchcodec\_core\ops.py", line 57 in load_torchcodec_shared_libraries
+  File "C:\Users\Elin\miniconda3\Lib\site-packages\torchcodec\_core\ops.py", line 109 in <module>
+  File "<frozen importlib._bootstrap>", line 241 in _call_with_frames_removed
+  File "<frozen importlib._bootstrap_external>", line 940 in exec_module
+  File "<frozen importlib._bootstrap>", line 690 in _load_unlocked
+  File "<frozen importlib._bootstrap>", line 1147 in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 1176 in _find_and_load
+  File "C:\Users\Elin\miniconda3\Lib\site-packages\torchcodec\_core\_metadata.py", line 16 in <module>
+  File "<frozen importlib._bootstrap>", line 241 in _call_with_frames_removed
+  File "<frozen importlib._bootstrap_external>", line 940 in exec_module
+  File "<frozen importlib._bootstrap>", line 690 in _load_unlocked
+  File "<frozen importlib._bootstrap>", line 1147 in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 1176 in _find_and_load
+  File "C:\Users\Elin\miniconda3\Lib\site-packages\torchcodec\_core\__init__.py", line 8 in <module>
+  File "<frozen importlib._bootstrap>", line 241 in _call_with_frames_removed
+  File "<frozen importlib._bootstrap_external>", line 940 in exec_module
+  File "<frozen importlib._bootstrap>", line 690 in _load_unlocked
+  File "<frozen importlib._bootstrap>", line 1147 in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 1176 in _find_and_load
+  File "C:\Users\Elin\miniconda3\Lib\site-packages\torchcodec\decoders\__init__.py", line 7 in <module>
+  File "<frozen importlib._bootstrap>", line 241 in _call_with_frames_removed
+  File "<frozen importlib._bootstrap_external>", line 940 in exec_module
+  File "<frozen importlib._bootstrap>", line 690 in _load_unlocked
+  File "<frozen importlib._bootstrap>", line 1147 in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 1176 in _find_and_load
+  File "<frozen importlib._bootstrap>", line 241 in _call_with_frames_removed
+  File "<frozen importlib._bootstrap>", line 1232 in _handle_fromlist
+  File "C:\Users\Elin\miniconda3\Lib\site-packages\torchcodec\__init__.py", line 12 in <module>
+  File "<frozen importlib._bootstrap>", line 241 in _call_with_frames_removed
+  File "<frozen importlib._bootstrap_external>", line 940 in exec_module
+  File "<frozen importlib._bootstrap>", line 690 in _load_unlocked
+  File "<frozen importlib._bootstrap>", line 1147 in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 1176 in _find_and_load
+  File "<frozen importlib._bootstrap>", line 241 in _call_with_frames_removed
+  File "<frozen importlib._bootstrap>", line 1126 in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 1176 in _find_and_load
+  File "C:\Users\Elin\miniconda3\Lib\site-packages\PyInstaller\building\build_main.py", line 194 in import_library
+  File "C:\Users\Elin\miniconda3\Lib\site-packages\PyInstaller\isolated\_child.py", line 63 in run_next_command
+  File "C:\Users\Elin\miniconda3\Lib\site-packages\PyInstaller\isolated\_child.py", line 96 in <module>
+Multiple distributions found for package optimum. Picked distribution: optimum-quanto
+Skipping import of cpp extensions due to incompatible torch version. Please upgrade to torch >= 2.11.0 (found 2.7.1+cu128).
+W0626 23:35:18.000000 20100 site-packages\torch\distributed\elastic\multiprocessing\redirects.py:29] NOTE: Redirects are currently not supported in Windows or MacOs.
+Unable to import `torchao` Tensor objects. This may affect loading checkpoints serialized with `torchao`
+C:\Users\Elin\AppData\Roaming\Python\Python311\site-packages\pydantic\_internal\_config.py:383: UserWarning: Valid config keys have changed in V2:
+* 'schema_extra' has been renamed to 'json_schema_extra'
+  warnings.warn(message, UserWarning)
+WARNING Ultralytics settings reset to default values. This may be due to a possible problem with your settings or a recent ultralytics package update.
+View Ultralytics Settings with 'yolo settings' or at 'C:\Users\Elin\AppData\Roaming\Ultralytics\settings.json'
+Update Settings with 'yolo settings key=value', i.e. 'yolo settings runs_dir=path/to/dir'. For help see https://docs.ultralytics.com/quickstart/#ultralytics-settings.
+Modular Diffusers is currently an experimental feature under active development. The API is subject to breaking changes in future releases.
+C:\Users\Elin\miniconda3\Lib\site-packages\kornia\feature\lightglue.py:44: FutureWarning: `torch.cuda.amp.custom_fwd(args...)` is deprecated. Please use `torch.amp.custom_fwd(args..., device_type='cuda')` instead.
+  @torch.cuda.amp.custom_fwd(cast_inputs=torch.float32)
+xFormers not available
+C:\Users\Elin\miniconda3\Lib\site-packages\PyInstaller\building\build_main.py:194: DeprecationWarning: `torch.distributed._sharding_spec` will be deprecated, use `torch.distributed._shard.sharding_spec` instead
+  __import__(package)
+C:\Users\Elin\miniconda3\Lib\site-packages\PyInstaller\building\build_main.py:194: DeprecationWarning: `torch.distributed._sharded_tensor` will be deprecated, use `torch.distributed._shard.sharded_tensor` instead
+  __import__(package)
+C:\Users\Elin\miniconda3\Lib\site-packages\PyInstaller\building\build_main.py:194: DeprecationWarning: `torch.distributed._shard.checkpoint` will be deprecated, use `torch.distributed.checkpoint` instead
+  __import__(package)
+C:\Users\Elin\miniconda3\Lib\site-packages\df\io.py:9: UserWarning: `torchaudio.backend.common.AudioMetaData` has been moved to `torchaudio.AudioMetaData`. Please update the import path.
+  from torchaudio.backend.common import AudioMetaData
+270850 INFO: Extra DLL search directories (AddDllDirectory): ['C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\numpy.libs', 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\scipy.libs', 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\pandas.libs', 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\shiboken6', 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\torch\\lib', 'C:\\Users\\Elin\\miniconda3\\Library\\bin', 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\torch\\bin', 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\torch\\bin', 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\torch\\bin', 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\torch\\bin', 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\google_crc32c\\extra-dll', 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\llvmlite.libs', 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\pygame', 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\cv2\\../../x64/vc14/bin', 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\av.libs', 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\torchvision', 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\torchvision', 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\torchvision', 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\torchvision', 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\torch\\bin', 'C:\\Program Files\\ImageMagick-7.1.1-Q16-HDRI', 'C:\\Program Files\\ImageMagick-7.1.1-Q16-HDRI', 'C:\\Program Files\\ImageMagick-7.1.1-Q16-HDRI', 'C:\\Program Files\\ImageMagick-7.1.1-Q16-HDRI', 'C:\\Program Files\\ImageMagick-7.1.1-Q16-HDRI', 'C:\\Program Files\\ImageMagick-7.1.1-Q16-HDRI', 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\shapely.libs', 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\torch\\bin', 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\torch\\bin', 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\torch\\bin', 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\torch\\bin', 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\torch\\bin', 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\torch\\bin', 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\torch\\bin', 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\torch\\bin', 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\torch\\bin', 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\torch\\bin', 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\torch\\bin', 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\torch\\bin', 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\torch\\bin', 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\torch\\bin', 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\torch\\bin', 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\torch\\bin', 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\torch\\bin', 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\torch\\bin', 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\torch\\bin', 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\torch\\bin', 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\torch\\bin', 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\torch\\bin', 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\torch\\bin', 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\torch\\bin', 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\torch\\bin', 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\torch\\bin', 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\torch\\bin', 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\torch\\bin', 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\torch\\bin', 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\torch\\bin', 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\torch\\bin', 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\DeepFilterLib.libs']
+270850 INFO: Extra DLL search directories (PATH): ['C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\cv2\\../../x64/vc14/bin', 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\PySide6', 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\decord']
+276214 WARNING: Library not found: could not resolve 'cublasLt64_13.dll', dependency of 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\bitsandbytes\\libbitsandbytes_cuda130.dll'.
+276214 WARNING: Library not found: could not resolve 'cublas64_13.dll', dependency of 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\bitsandbytes\\libbitsandbytes_cuda130.dll'.
+276215 WARNING: Library not found: could not resolve 'sycl8.dll', dependency of 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\bitsandbytes\\libbitsandbytes_xpu.dll'.
+276216 WARNING: Library not found: could not resolve 'cufft64_12.dll', dependency of 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\cupy\\cuda\\cufft.cp311-win_amd64.pyd'.
+276216 WARNING: Library not found: could not resolve 'cublas64_13.dll', dependency of 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\cupy_backends\\cuda\\libs\\cublas.cp311-win_amd64.pyd'.
+276216 WARNING: Library not found: could not resolve 'cusolver64_12.dll', dependency of 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\cupy_backends\\cuda\\libs\\cusolver.cp311-win_amd64.pyd'.
+276217 WARNING: Library not found: could not resolve 'cuTENSOR.dll', dependency of 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\cupy_backends\\cuda\\libs\\cutensor.cp311-win_amd64.pyd'.
+276217 WARNING: Library not found: could not resolve 'cuTENSORMg.dll', dependency of 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\cupy_backends\\cuda\\libs\\cutensor.cp311-win_amd64.pyd'.
+276217 WARNING: Library not found: could not resolve 'nvrtc64_130_0.dll', dependency of 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\cupy\\cuda\\jitify.cp311-win_amd64.pyd'.
+276218 WARNING: Library not found: could not resolve 'tbb12.dll', dependency of 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\numba\\np\\ufunc\\tbbpool.cp311-win_amd64.pyd'.
+276218 WARNING: Library not found: could not resolve 'cusolver64_12.dll', dependency of 'C:\\Users\\Elin\\miniconda3\\Lib\\site-packages\\cupyx\\cusolver.cp311-win_amd64.pyd'.
+276627 INFO: Warnings written to C:\Tools\AI_Code_Projects\AudioBookGen\build\_work\sidecar\warn-sidecar.txt
+278063 INFO: Graph cross-reference written to C:\Tools\AI_Code_Projects\AudioBookGen\build\_work\sidecar\xref-sidecar.html
+278512 INFO: checking PYZ
+278683 INFO: Building because toc changed
+278683 INFO: Building PYZ (ZlibArchive) C:\Tools\AI_Code_Projects\AudioBookGen\build\_work\sidecar\PYZ-00.pyz
+295711 INFO: Building PYZ (ZlibArchive) C:\Tools\AI_Code_Projects\AudioBookGen\build\_work\sidecar\PYZ-00.pyz completed successfully.
+295975 INFO: checking PKG
+295981 INFO: Building because C:\Tools\AI_Code_Projects\AudioBookGen\build\_work\sidecar\PYZ-00.pyz changed
+295981 INFO: Building PKG (CArchive) abg-sidecar.pkg
+296064 INFO: Building PKG (CArchive) abg-sidecar.pkg completed successfully.
+296066 INFO: Bootloader C:\Users\Elin\miniconda3\Lib\site-packages\PyInstaller\bootloader\Windows-64bit-intel\run.exe
+296067 INFO: checking EXE
+296073 INFO: Rebuilding EXE-00.toc because pkg is more recent
+296075 INFO: Building EXE from EXE-00.toc
+296075 INFO: Copying bootloader EXE to C:\Tools\AI_Code_Projects\AudioBookGen\build\_work\sidecar\abg-sidecar.exe
+296115 INFO: Copying icon to EXE
+296157 INFO: Copying 0 resources to EXE
+296157 INFO: Embedding manifest in EXE
+296197 INFO: Appending PKG archive to EXE
+296260 INFO: Fixing EXE headers
+297140 INFO: Building EXE from EXE-00.toc completed successfully.
+297206 INFO: checking COLLECT
+297314 INFO: Removing dir C:\Tools\AI_Code_Projects\AudioBookGen\dist_sidecar\abg-sidecar
+298807 INFO: Building COLLECT COLLECT-00.toc
+npm error code ENOENT
+npm error syscall open
+npm error path C:\Tools\AI_Code_Projects\AudioBookGen\package.json
+npm error errno -4058
+npm error enoent Could not read package.json: Error: ENOENT: no such file or directory, open 'C:\Tools\AI_Code_Projects\AudioBookGen\package.json'
+npm error enoent This is related to npm not being able to find a file.
+npm error enoent
+npm error A complete log of this run can be found in: C:\Users\Elin\AppData\Local\npm-cache\_logs\2026-06-26T21_36_14_249Z-debug-0.log
+
+> audiobookgen-electron@0.1.0 installer
+> electron-builder
+
+Der Befehl "electron-builder" ist entweder falsch geschrieben oder
+konnte nicht gefunden werden.
+Done. Installer is in: C:\Tools\AI_Code_Projects\AudioBookGen\installer
+
+Build finished. Installer is in:  "C:\Tools\AI_Code_Projects\AudioBookGen\installer"
+
+Drücken Sie eine beliebige Taste . . .

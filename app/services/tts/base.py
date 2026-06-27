@@ -23,6 +23,7 @@ class TTSRequest:
     delivery: Delivery | None = None   # None -> neutral delivery
     seed: int = 0
     out_path: Path | None = None
+    workflow: str | None = None        # clone workflow override (None -> config default)
 
 
 class TTSEngine(Protocol):

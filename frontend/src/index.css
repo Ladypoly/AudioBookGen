@@ -1,0 +1,59 @@
+@import "tailwindcss";
+
+/* Design tokens — modern dark theme for AudioBookGen. */
+@theme {
+  --color-bg: #0b0e16;
+  --color-surface: #12161f;
+  --color-surface-2: #171c28;
+  --color-elevated: #1c2230;
+  --color-border: #232a3a;
+  --color-border-strong: #2e3650;
+  --color-muted: #8b93a7;
+  --color-faint: #5b6376;
+  --color-text: #e7eaf2;
+  --color-accent: #5b8cff;
+  --color-accent-strong: #3a6df0;
+  --color-good: #4ade80;
+  --color-warn: #f4c361;
+  --color-bad: #f4707a;
+  --color-narrator: #9aa3b2;
+
+  --radius-card: 14px;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: "Segoe UI", Inter, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Sliding bar for indeterminate generation progress (timeline clips). */
+@keyframes indeterminate {
+  0% { transform: translateX(-120%); }
+  100% { transform: translateX(360%); }
+}
+
+/* Slim scrollbars to match the dark shell. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border-strong) transparent;
+}
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-border-strong);
+  border-radius: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}

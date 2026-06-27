@@ -30,6 +30,10 @@ FIELDS: list[tuple] = [
     ("LLM", "API key", "ollama.api_key", "password", None),
     ("LLM", "API model", "ollama.api_model", "str", None),
     ("LLM", "Temperature", "ollama.temperature", "float", None),
+    # Per-phase model "orchestra" (persisted here; edited via the LLM panel UI).
+    ("LLM", "Extraction model (Pass A)", "ollama.extraction_model", "str", None),
+    ("LLM", "Refine model (Pass B)", "ollama.refine_model", "str", None),
+    ("LLM", "Prompt model (style/portraits)", "ollama.prompt_model", "str", None),
 
     ("ComfyUI", "ComfyUI install dir", "comfy.comfy_dir", "path", None),
     ("ComfyUI", "ComfyUI URL", "comfy.base_url", "str", None),
@@ -105,6 +109,8 @@ FIELDS: list[tuple] = [
     ("Performance", "Render timeout (s)", "comfy.request_timeout_s", "float", None),
     ("Performance", "TTS timeout (s)", "comfy.tts_timeout_s", "float", None),
     ("Performance", "Audio/SFX timeout (s)", "comfy.audio_timeout_s", "float", None),
+    ("Performance", "Disable model thinking (faster; Qwen3 etc.)", "ollama.disable_thinking", "bool", None),
+    ("Performance", "Extraction concurrency (set OLLAMA_NUM_PARALLEL too)", "ollama.llm_concurrency", "int", None),
     ("Performance", "LLM request timeout (s)", "ollama.request_timeout_s", "float", None),
     ("Performance", "LLM auto context (from model)", "ollama.auto_ctx", "bool", None),
     ("Performance", "LLM context cap (VRAM ceiling)", "ollama.ctx_cap", "int", None),

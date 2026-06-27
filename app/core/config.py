@@ -49,6 +49,21 @@ class OllamaConfig:
     # For uncensored content try "igorls/gemma-4-12B-it-heretic-GGUF:Q8_0" (12b
     # base, untested but likely coherent) — NOT the abliterated 26B.
     model: str = "gemma4:12b"
+    # Per-phase model "orchestra" (local Ollama only; empty = use `model`):
+    #   extraction = Pass A mention extraction (high volume — a fast small model
+    #     like qwen3.5:4b); refine = Pass B speaker refine + alias merge;
+    #   prompt = style bible / portrait prompts / sample lines (quality).
+    extraction_model: str = ""
+    refine_model: str = ""
+    prompt_model: str = ""
+    # Disable model "thinking" (Qwen3 etc. reason before answering, which is pure
+    # overhead for schema-constrained extraction — 2-3x slower). Sent as
+    # Ollama's `think: false`; ignored gracefully for non-thinking models.
+    disable_thinking: bool = True
+    # Concurrent per-chapter LLM calls during extraction. Real speedup needs the
+    # Ollama server to allow parallelism (OLLAMA_NUM_PARALLEL>=this); otherwise
+    # requests just queue. 1 = sequential (old behaviour).
+    llm_concurrency: int = 4
     request_timeout_s: float = 300.0
     max_retries: int = 2
     # keep_alive controls how long Ollama keeps the model resident in VRAM.

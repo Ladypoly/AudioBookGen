@@ -7,6 +7,8 @@ from a background worker thread (not the Qt UI thread).
 
 from __future__ import annotations
 
+import contextlib
+import contextvars
 import json
 import logging
 from typing import TypeVar
@@ -19,6 +21,27 @@ from app.core.config import CONFIG
 logger = logging.getLogger(__name__)
 
 T = TypeVar("T", bound=BaseModel)
+
+# Per-phase model override (the extraction "orchestra"). Set around a pipeline
+# phase via use_model(); generate_json reads it so deep call sites don't need a
+# model parameter threaded through. Local Ollama only.
+_MODEL_OVERRIDE: contextvars.ContextVar[str | None] = contextvars.ContextVar(
+    "llm_model_override", default=None)
+
+
+def active_model() -> str:
+    """The Ollama model for the current call: phase override, else the default."""
+    return _MODEL_OVERRIDE.get() or CONFIG.ollama.model
+
+
+@contextlib.contextmanager
+def use_model(name: str | None):
+    """Run a block with a specific Ollama model active (empty/None = default)."""
+    token = _MODEL_OVERRIDE.set(name or None)
+    try:
+        yield
+    finally:
+        _MODEL_OVERRIDE.reset(token)
 
 _CORRECTION_SUFFIX = (
     "\n\nYour previous response was not valid JSON of the required shape. "
@@ -94,9 +117,9 @@ def resolve_num_ctx() -> int:
     cfg = CONFIG.ollama
     if not use_ollama_proto() or not cfg.auto_ctx:
         return cfg.num_ctx
-    key = cfg.model
+    key = active_model()
     if key not in _CTX_CACHE:
-        mx = model_max_ctx(cfg.base_url, cfg.model)
+        mx = model_max_ctx(cfg.base_url, key)
         _CTX_CACHE[key] = min(mx, cfg.ctx_cap) if mx else cfg.num_ctx
         logger.info("num_ctx for %s = %d (model max %s, cap %d)",
                     key, _CTX_CACHE[key], mx, cfg.ctx_cap)
@@ -173,12 +196,18 @@ def _post_openai(prompt: str, schema_dict: dict) -> str:
     return data["choices"][0]["message"]["content"]
 
 
+# Models that rejected the `think` parameter (not thinking-capable) — so we stop
+# sending it to them after the first 400.
+_NO_THINK_PARAM: set[str] = set()
+
+
 def _post_generate(prompt: str, fmt: object, num_predict: int | None = None) -> str:
     if not use_ollama_proto():
         return _post_openai(prompt, fmt)   # fmt is schema.model_json_schema()
     cfg = CONFIG.ollama
+    model = active_model()
     payload = {
-        "model": cfg.model,
+        "model": model,
         "prompt": prompt,
         # Structured outputs: a JSON schema constrains decoding to valid,
         # enum-conforming JSON (far more reliable than format:"json").
@@ -193,9 +222,18 @@ def _post_generate(prompt: str, fmt: object, num_predict: int | None = None) -> 
             "num_predict": num_predict or cfg.num_predict,
         },
     }
+    # Skip slow reasoning on thinking models (Qwen3 etc.) — extraction doesn't
+    # need it. Non-thinking models reject the param; remember and stop sending it.
+    if cfg.disable_thinking and model not in _NO_THINK_PARAM:
+        payload["think"] = False
+
     url = f"{cfg.base_url.rstrip('/')}/api/generate"
     with httpx.Client(timeout=cfg.request_timeout_s) as client:
         resp = client.post(url, json=payload)
+        if resp.status_code >= 400 and "think" in payload and "think" in (resp.text or "").lower():
+            _NO_THINK_PARAM.add(model)               # model can't think — drop the param
+            payload.pop("think")
+            resp = client.post(url, json=payload)
         resp.raise_for_status()
         data = resp.json()
     return data.get("response", "")

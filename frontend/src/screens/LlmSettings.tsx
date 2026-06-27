@@ -16,6 +16,9 @@ interface Llm {
   api_key: string;
   api_model: string;
   temperature: number;
+  extraction_model: string;
+  refine_model: string;
+  prompt_model: string;
 }
 
 const KEYS: Record<keyof Llm, string> = {
@@ -28,6 +31,9 @@ const KEYS: Record<keyof Llm, string> = {
   api_key: "ollama.api_key",
   api_model: "ollama.api_model",
   temperature: "ollama.temperature",
+  extraction_model: "ollama.extraction_model",
+  refine_model: "ollama.refine_model",
+  prompt_model: "ollama.prompt_model",
 };
 
 function Seg({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
@@ -64,6 +70,9 @@ export function LlmSettings() {
         api_key: String(s[KEYS.api_key] ?? ""),
         api_model: String(s[KEYS.api_model] ?? ""),
         temperature: Number(s[KEYS.temperature] ?? 0.45),
+        extraction_model: String(s[KEYS.extraction_model] ?? ""),
+        refine_model: String(s[KEYS.refine_model] ?? ""),
+        prompt_model: String(s[KEYS.prompt_model] ?? ""),
       });
     });
     api.providers().then(setProviders).catch(() => {});
@@ -146,6 +155,35 @@ export function LlmSettings() {
               ))}
             </select>
           </label>
+
+          {/* Per-phase model "orchestra" — speeds up extraction by running the
+              high-volume Pass A on a fast small model. Empty = use Model above. */}
+          <div className="rounded-lg border border-border bg-surface-2 p-3">
+            <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-accent">Extraction orchestra</div>
+            <p className="mb-2 text-xs text-faint">
+              Optional per-phase models (empty = use the Model above). Run the high-volume
+              cast pass on a fast small model (e.g. qwen3.5:4b), the rest on your main model.
+              Tip: set <code>OLLAMA_NUM_PARALLEL=6</code> on the Ollama server.
+            </p>
+            {([
+              ["extraction_model", "Pass A — read cast (fast/small)"],
+              ["refine_model", "Pass B — speaker refine"],
+              ["prompt_model", "Style / portraits / intro lines"],
+            ] as [keyof Llm, string][]).map(([key, label]) => (
+              <label key={key} className="mb-2 flex flex-col gap-1 last:mb-0">
+                <span className={labelCls}>{label}</span>
+                <select className={inputCls} value={String(v[key])} onChange={(e) => set({ [key]: e.target.value } as Partial<Llm>)}>
+                  <option value="">Default ({v.model || "main model"})</option>
+                  {String(v[key]) && !localModels.includes(String(v[key])) && (
+                    <option value={String(v[key])}>{String(v[key])} (current)</option>
+                  )}
+                  {localModels.map((m) => (
+                    <option key={m} value={m}>{m}</option>
+                  ))}
+                </select>
+              </label>
+            ))}
+          </div>
         </>
       ) : (
         <>

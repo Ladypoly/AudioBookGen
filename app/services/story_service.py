@@ -157,29 +157,50 @@ def extract_story(
     progress: ProgressCb | None = None,
     is_cancelled: CancelCb | None = None,
     partial: PartialCb | None = None,
+    timings: dict | None = None,
 ) -> tuple[list[Character], list[Chapter]]:
     """Run detect -> Pass A -> roster -> Pass B. Returns (characters, content
     chapters). Content chapters are saved as curated line plans; front matter,
     afterword, index, style bible and portraits are added by the caller."""
+    import time
+    from app.core.config import CONFIG
+    from app.services import llm_pool
+
     chapters = detect(project)
     total = len(chapters)
+    conc = CONFIG.ollama.llm_concurrency
+    _t_a = time.monotonic()
 
-    # --- Pass A: clean per-chapter character mentions ------------------------
+    # --- Pass A: clean per-chapter character mentions (fast small model) ------
     all_mentions: list[CharacterMention] = []
     mentions_by_chapter: dict[str, list[CharacterMention]] = {}
-    for idx, ch in enumerate(chapters, start=1):
-        if is_cancelled and is_cancelled():
-            break
-        if progress:
-            progress(idx - 1, total, f"Reading characters {idx}/{total}")
+
+    def _read_chapter(ch):
         cached = _load_mentions(project, ch.chapter_id)
         if cached is None:
             cached = extract_chapter_mentions(ch)
             _save_mentions(project, ch.chapter_id, cached)
-        all_mentions.extend(cached)
-        mentions_by_chapter[ch.chapter_id] = cached
-        if partial and all_mentions:
-            partial(character_service.roster_from_mentions(all_mentions))
+        return ch.chapter_id, cached
+
+    done_a = [0]
+
+    def _merge_a(_i, res):           # runs on the calling thread → safe
+        done_a[0] += 1
+        if res:
+            cid, cached = res
+            all_mentions.extend(cached)
+            mentions_by_chapter[cid] = cached
+            if partial and all_mentions:
+                partial(character_service.roster_from_mentions(all_mentions))
+        if progress:
+            progress(done_a[0], total, f"Reading characters {done_a[0]}/{total}")
+
+    with ollama_service.use_model(CONFIG.ollama.extraction_model):
+        llm_pool.parallel_map(chapters, _read_chapter, conc,
+                              on_complete=_merge_a, is_cancelled=is_cancelled)
+    if timings is not None:
+        timings["pass_a"] = time.monotonic() - _t_a
+        timings["mentions"] = len(all_mentions)
 
     # --- roster: clean cards (deterministic proper-name resolution) ----------
     if progress:
@@ -192,15 +213,11 @@ def extract_story(
     if is_cancelled and is_cancelled():
         return characters, chapters
 
-    # --- Pass B: heuristic plan + LLM speaker refine -------------------------
-    for idx, ch in enumerate(chapters, start=1):
-        if is_cancelled and is_cancelled():
-            break
-        if progress:
-            progress(idx - 1, total, f"Storyboard chapter {idx}/{total}")
+    # --- Pass B: heuristic plan + LLM speaker refine (reasoning model) -------
+    def _storyboard(ch):
         existing = chapter_service.load_chapter(project, ch.chapter_id)
         if existing is not None and existing.curated and existing.lines:
-            continue                                   # resume: already done
+            return                                         # resume: already done
         # Resolve multi-age characters to the variant matching THIS chapter's
         # age, so e.g. "Anna" maps to the child or the adult Anna correctly.
         ch_chars = character_service.resolve_for_chapter(
@@ -209,6 +226,20 @@ def extract_story(
         refine_speakers(ch, ch_chars)
         ch.curated = True
         chapter_service.save_chapter(project, ch)
+
+    done_b = [0]
+
+    def _prog_b(_i, _res):
+        done_b[0] += 1
+        if progress:
+            progress(done_b[0], total, f"Storyboard chapter {done_b[0]}/{total}")
+
+    _t_b = time.monotonic()
+    with ollama_service.use_model(CONFIG.ollama.refine_model):
+        llm_pool.parallel_map(chapters, _storyboard, conc,
+                              on_complete=_prog_b, is_cancelled=is_cancelled)
+    if timings is not None:
+        timings["pass_b"] = time.monotonic() - _t_b
     if progress:
         progress(total, total, "Story extracted")
     return characters, chapters

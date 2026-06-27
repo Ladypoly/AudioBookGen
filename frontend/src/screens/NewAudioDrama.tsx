@@ -123,16 +123,17 @@ export function NewAudioDrama({
     }
   };
 
-  // Watch the extraction job; on completion, enter the project.
+  // Watch the extraction job. On completion we show the import report and wait
+  // for the user to open the project (no silent auto-navigate that could hang).
   const job = useMemo(() => jobs.find((j) => j.id === jobId) ?? null, [jobs, jobId]);
+  const autoGenFired = useRef(false);
   useEffect(() => {
-    if (phase === "extracting" && job?.state === "done") {
-      const pid = (job.meta?.project_id as string) || "";
-      if (autoGen) api.generateMissing().catch(() => {});   // batch portraits + voices
-      const t = setTimeout(() => onCreated(pid), 700);
-      return () => clearTimeout(t);
+    if (phase === "extracting" && job?.state === "done" && autoGen && !autoGenFired.current) {
+      autoGenFired.current = true;
+      api.generateMissing().catch(() => {});   // batch portraits + voices
     }
-  }, [phase, job, onCreated, autoGen]);
+  }, [phase, job, autoGen]);
+  const openProject = () => onCreated((job?.meta?.project_id as string) || "");
 
   return (
     <Backdrop>
@@ -234,7 +235,7 @@ export function NewAudioDrama({
         )}
 
         {phase === "extracting" && (
-          <ExtractingView job={job} />
+          <ExtractingView job={job} onOpen={openProject} />
         )}
       </div>
 
@@ -257,13 +258,63 @@ export function NewAudioDrama({
   );
 }
 
-function ExtractingView({ job }: { job: JobView | null }) {
+interface ImportReport {
+  total_seconds: number;
+  concurrency: number;
+  thinking_disabled: boolean;
+  counts: { chapters: number; characters: number; mentions: number };
+  phases: { name: string; seconds: number; model: string }[];
+}
+
+function ReportView({ report, onOpen }: { report: ImportReport; onOpen: () => void }) {
+  return (
+    <div className="py-2">
+      <div className="mb-3 text-center">
+        <div className="text-3xl">✅</div>
+        <p className="mt-1 text-sm font-medium text-text">
+          {report.counts.characters} characters · {report.counts.chapters} chapters · {report.total_seconds}s
+        </p>
+        <p className="text-xs text-faint">
+          concurrency {report.concurrency} · thinking {report.thinking_disabled ? "off" : "on"} · {report.counts.mentions} mentions
+        </p>
+      </div>
+      <div className="overflow-hidden rounded-lg border border-border">
+        <table className="w-full text-xs">
+          <thead className="bg-surface-2 text-faint">
+            <tr><th className="px-3 py-1.5 text-left font-medium">Phase</th><th className="px-3 py-1.5 text-left font-medium">Model</th><th className="px-3 py-1.5 text-right font-medium">Time</th></tr>
+          </thead>
+          <tbody>
+            {report.phases.map((p, i) => (
+              <tr key={i} className="border-t border-border">
+                <td className="px-3 py-1.5 text-text">{p.name}</td>
+                <td className="px-3 py-1.5 font-mono text-muted">{p.model}</td>
+                <td className="px-3 py-1.5 text-right font-mono text-muted">{p.seconds}s</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <button
+        onClick={onOpen}
+        className="mt-4 w-full rounded-lg bg-accent-strong px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-accent"
+      >
+        Open project →
+      </button>
+      <p className="mt-1 text-center text-[10px] text-faint">Saved to analysis/import_reports.json (one entry per run)</p>
+    </div>
+  );
+}
+
+function ExtractingView({ job, onOpen }: { job: JobView | null; onOpen: () => void }) {
   const steps = (job?.meta?.steps as { key: string; label: string }[]) ?? [];
   const activeKey = (job?.meta?.step as string) ?? "prepare";
   const activeIdx = Math.max(0, steps.findIndex((s) => s.key === activeKey));
   const active = steps[activeIdx];
   const failed = job?.state === "failed";
   const done = job?.state === "done";
+  const report = job?.meta?.report as ImportReport | undefined;
+
+  if (done && report) return <ReportView report={report} onOpen={onOpen} />;
 
   // Current-task progress: backend sends a fraction (e.g. chapter 39/59) or -1
   // for indeterminate. Overall progress spans the steps + the within-step fraction.
@@ -324,6 +375,15 @@ function ExtractingView({ job }: { job: JobView | null }) {
       </ol>
 
       {failed && <p className="mt-3 text-sm text-bad">Extraction failed: {job?.error}</p>}
+
+      {done && (
+        <button
+          onClick={onOpen}
+          className="mt-4 w-full rounded-lg bg-accent-strong px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-accent"
+        >
+          Open project →
+        </button>
+      )}
     </div>
   );
 }
